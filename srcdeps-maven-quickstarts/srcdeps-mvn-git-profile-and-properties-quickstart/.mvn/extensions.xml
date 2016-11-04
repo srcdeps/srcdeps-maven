@@ -19,7 +19,7 @@
 -->
 <extensions>
   <extension>
-    <groupId>org.l2x6.srcdeps</groupId>
+    <groupId>org.srcdeps.mvn</groupId>
     <artifactId>srcdeps-maven-local-repository</artifactId>
     <version>1.0.1</version><!-- @srcdeps.version@ -->
   </extension>

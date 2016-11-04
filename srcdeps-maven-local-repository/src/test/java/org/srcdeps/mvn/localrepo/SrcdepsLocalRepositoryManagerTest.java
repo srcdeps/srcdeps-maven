@@ -30,6 +30,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.srcdeps.core.config.Configuration;
 import org.srcdeps.core.util.SrcdepsCoreUtils;
 
 import io.takari.maven.testing.TestResources;
@@ -54,13 +55,11 @@ public class SrcdepsLocalRepositoryManagerTest {
     private static final String encoding = System.getProperty("project.build.sourceEncoding");
     private static final Path basedir = Paths.get(System.getProperty("basedir", new File("").getAbsolutePath()));
     private static final Pattern replacementPattern = Pattern.compile(Pattern.quote("<version>") + "[^<]+" + Pattern.quote("</version><!-- @srcdeps.version@ -->"));
-    private static final Path srcdepsCorePath;
     private static final Path srcdepsQuickstartsPath;
 
     static {
-        srcdepsCorePath = basedir.resolve("../srcdeps-core").normalize();
         srcdepsQuickstartsPath = basedir.resolve("../srcdeps-maven-quickstarts").normalize();
-        mvnLocalRepo = srcdepsCorePath.resolve("target/mvn-local-repo");
+        mvnLocalRepo = basedir.resolve("target/mvn-local-repo");
     }
 
     public final MavenRuntime verifier;
@@ -70,8 +69,6 @@ public class SrcdepsLocalRepositoryManagerTest {
 
         @Override
         public File getBasedir(String project) throws IOException {
-
-            Assert.assertTrue("["+ srcdepsCorePath +"] should exist", Files.exists(srcdepsCorePath));
 
             File result = super.getBasedir(project);
 
@@ -91,7 +88,12 @@ public class SrcdepsLocalRepositoryManagerTest {
     };
 
     @BeforeClass
-    public static void beforeClass() {
+    public static void beforeClass() throws IOException {
+
+        SrcdepsCoreUtils.ensureDirectoryExistsAndEmpty(mvnLocalRepo);
+
+        System.setProperty(Configuration.SRCDEPS_MVN_SETTINGS_PROP, mrmSettingsXmlPath);
+
         Assert.assertTrue("[" + mrmSettingsXmlPath + "] should exist", Files.exists(Paths.get(mrmSettingsXmlPath)));
         Assert.assertNotNull("project.build.sourceEncoding property must be set", encoding);
         Assert.assertNotNull("project.version property must be set", projectVersion);
