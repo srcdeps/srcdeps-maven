@@ -74,21 +74,15 @@
 
     <!-- dependencies -->
     <version.io.takari.maven.plugins>2.9.0</version.io.takari.maven.plugins>
+    <version.junit>4.12</version.junit>
     <version.org.apache.maven>3.3.9</version.org.apache.maven>
-    <!-- com.google.inject alias guice
-         keep in sync with guiceVersion in maven
-         around https://github.com/apache/maven/blob/master/pom.xml#L61 -->
-    <version.com.google.inject>4.0</version.com.google.inject>
     <!-- keep in sync with aetherVersion in maven
          around https://github.com/apache/maven/blob/master/pom.xml#L67 -->
     <version.org.eclipse.aether>1.0.2.v20150114</version.org.eclipse.aether>
     <!-- keep in sync with sisuInjectVersion in maven
          around https://github.com/apache/maven/blob/master/pom.xml#L61 -->
     <version.org.eclipse.sisu>0.3.2</version.org.eclipse.sisu>
-    <version.org.eclipse.jgit>4.4.1.201607150455-r</version.org.eclipse.jgit>
-    <version.junit>4.12</version.junit>
     <version.org.slf4j>1.7.5</version.org.slf4j>
-    <version.org.snakeyaml>1.17</version.org.snakeyaml>
     <version.org.srcdeps.core>2.0.0</version.org.srcdeps.core>
 
     <!--
@@ -167,12 +161,6 @@
     <dependencies>
 
       <dependency>
-        <groupId>com.google.inject</groupId>
-        <artifactId>guice</artifactId>
-        <version>${version.com.google.inject}</version>
-      </dependency>
-
-      <dependency>
         <groupId>io.takari.maven.plugins</groupId>
         <artifactId>takari-plugin-testing</artifactId>
         <version>${version.io.takari.maven.plugins}</version>
@@ -218,13 +206,6 @@
         <version>${version.org.eclipse.aether}</version>
       </dependency>
 
-
-      <dependency>
-        <groupId>org.eclipse.jgit</groupId>
-        <artifactId>org.eclipse.jgit</artifactId>
-        <version>${version.org.eclipse.jgit}</version>
-      </dependency>
-
       <dependency>
         <groupId>org.eclipse.sisu</groupId>
         <artifactId>org.eclipse.sisu.inject</artifactId>
@@ -253,11 +234,6 @@
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-simple</artifactId>
         <version>${version.org.slf4j}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.yaml</groupId>
-        <artifactId>snakeyaml</artifactId>
-        <version>${version.org.snakeyaml}</version>
       </dependency>
 
     </dependencies>
