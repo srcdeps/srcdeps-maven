@@ -46,9 +46,7 @@
   </developers>
 
   <modules>
-    <module>srcdeps-core</module>
     <module>srcdeps-maven-local-repository</module>
-    <module>srcdeps-config-yaml</module>
   </modules>
 
   <scm>
