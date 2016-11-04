@@ -89,6 +89,7 @@
     <version.junit>4.12</version.junit>
     <version.org.slf4j>1.7.5</version.org.slf4j>
     <version.org.snakeyaml>1.17</version.org.snakeyaml>
+    <version.org.srcdeps.core>2.0.0</version.org.srcdeps.core>
 
     <!--
       Maven plugin versions
@@ -232,14 +233,14 @@
       </dependency>
 
       <dependency>
-        <groupId>org.l2x6.srcdeps</groupId>
-        <artifactId>srcdeps-config-yaml</artifactId>
-        <version>1.0.2-SNAPSHOT</version>
+        <groupId>org.srcdeps.core</groupId>
+        <artifactId>srcdeps-core-config-yaml</artifactId>
+        <version>${version.org.srcdeps.core}</version>
       </dependency>
       <dependency>
         <groupId>org.l2x6.srcdeps</groupId>
         <artifactId>srcdeps-core</artifactId>
-        <version>1.0.2-SNAPSHOT</version>
+        <version>${version.org.srcdeps.core}</version>
       </dependency>
 
       <dependency>
