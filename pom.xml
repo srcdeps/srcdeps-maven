@@ -25,7 +25,7 @@
   <version>1.0.2-SNAPSHOT</version>
   <packaging>pom</packaging>
 
-  <name>Srcdeps Parent</name>
+  <name>Srcdeps Maven Parent</name>
   <description>A set of tools for building dependencies from their sources during the build</description>
   <url>https://github.com/srcdeps/srcdeps</url>
   <inceptionYear>2015</inceptionYear>
