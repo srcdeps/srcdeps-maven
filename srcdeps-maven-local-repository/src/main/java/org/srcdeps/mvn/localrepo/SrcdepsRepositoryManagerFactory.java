@@ -35,42 +35,52 @@ import org.srcdeps.core.BuildService;
 import org.srcdeps.core.SrcVersion;
 import org.srcdeps.core.fs.PathLocker;
 
+import io.takari.aether.localrepo.TakariLocalRepositoryManagerFactory;
+
 /**
  * A {@link LocalRepositoryManagerFactory} that produces {@link SrcdepsLocalRepositoryManager}. This is done through
  * looking up the {@link LocalRepositoryManagerFactory} implementations visible from the present Guice module, choosing
- * the one with the highest priority (ignoring {@link SrcdepsRepositoryManagerFactory}) and using that one as a
- * delegate.
+ * the one specified in the {@code "srcdeps.repomanager.delegate.factory"} system property. If the
+ * {@code "srcdeps.repomanager.delegate.factory"} system property was not set, the
+ * {@value #DEFAULT_SRCDEPS_REPOMANAGER_DELAGATE_FACTORY} is used. The selected {@link LocalRepositoryManagerFactory}
+ * implementation is then used as a delegate.
  *
  * @author <a href="https://github.com/ppalaga">Peter Palaga</a>
  */
 @Named("srcdeps")
 public class SrcdepsRepositoryManagerFactory implements LocalRepositoryManagerFactory {
-    private static final Logger log = LoggerFactory.getLogger(SrcdepsRepositoryManagerFactory.class);
-    public static final String SRCDEPS_REPOMANAGER_PRIORITY = "srcdeps.repomanager.priority";
+    public static final String DEFAULT_SRCDEPS_REPOMANAGER_DELAGATE_FACTORY = TakariLocalRepositoryManagerFactory.class
+            .getName();
     public static final float DEFAULT_SRCDEPS_REPOMANAGER_PRIORITY = 30;
+    private static final Logger log = LoggerFactory.getLogger(SrcdepsRepositoryManagerFactory.class);
+    public static final String SRCDEPS_REPOMANAGER_DELAGATE_FACTORY = "srcdeps.repomanager.delegate.factory";
+    public static final String SRCDEPS_REPOMANAGER_PRIORITY = "srcdeps.repomanager.priority";
 
-    private final float priority;
-
-    public SrcdepsRepositoryManagerFactory() {
-        this.priority = Float.parseFloat(
-                System.getProperty(SRCDEPS_REPOMANAGER_PRIORITY, String.valueOf(DEFAULT_SRCDEPS_REPOMANAGER_PRIORITY)));
-    }
-
+    /** Passed to {@link SrcdepsLocalRepositoryManager} */
+    @Inject
+    private BuildService buildService;
     /** See {@link #lookupDelegate()} */
     @Inject
     private Provider<Map<String, LocalRepositoryManagerFactory>> factories;
 
     /** Passed to {@link SrcdepsLocalRepositoryManager} */
     @Inject
-    private BuildService buildService;
-
-    /** Passed to {@link SrcdepsLocalRepositoryManager} */
-    @Inject
     private PathLocker<SrcVersion> pathLocker;
+
+    private final String preferedDelegateFactoryName;
+
+    private final float priority;
 
     /** Passed to {@link SrcdepsLocalRepositoryManager} */
     @Inject
     private Provider<MavenSession> sessionProvider;
+
+    public SrcdepsRepositoryManagerFactory() {
+        this.priority = Float.parseFloat(
+                System.getProperty(SRCDEPS_REPOMANAGER_PRIORITY, String.valueOf(DEFAULT_SRCDEPS_REPOMANAGER_PRIORITY)));
+        this.preferedDelegateFactoryName = System.getProperty(SRCDEPS_REPOMANAGER_DELAGATE_FACTORY,
+                DEFAULT_SRCDEPS_REPOMANAGER_DELAGATE_FACTORY);
+    }
 
     /**
      * Looks up the delegate using {@link #lookupDelegate()}, calls
@@ -104,30 +114,34 @@ public class SrcdepsRepositoryManagerFactory implements LocalRepositoryManagerFa
     }
 
     /**
-     * Looks up the {@link LocalRepositoryManagerFactory} with highest priority (ignoring
-     * {@link SrcdepsRepositoryManagerFactory}) using {@link #factories}. We need to do this lazily, because otherwise
-     * there would be a circular dependency between {@link SrcdepsRepositoryManagerFactory} and the injected map of
-     * {@link #factories}.
+     * Looks up the {@link LocalRepositoryManagerFactory} specified in {@link #preferedDelegateFactoryName}.
      *
      * @return the delegate factory
+     * @throws IllegalStateException
+     *             if the {@link #preferedDelegateFactoryName} was not found in the list of available
+     *             {@link LocalRepositoryManagerFactory} implementations.
      */
     private LocalRepositoryManagerFactory lookupDelegate() {
         Map<String, LocalRepositoryManagerFactory> factoryImpls = factories.get();
         log.debug("SrcdepsRepositoryManagerFactory got {} LocalRepositoryManagerFactory instances",
                 factoryImpls.size());
 
-        LocalRepositoryManagerFactory winner = null;
         for (Entry<String, LocalRepositoryManagerFactory> en : factoryImpls.entrySet()) {
             LocalRepositoryManagerFactory factory = en.getValue();
+
             log.debug("SrcdepsRepositoryManagerFactory iterating over LocalRepositoryManagerFactory {}: {}",
                     en.getKey(), factory.getClass().getName());
-            if (factory instanceof SrcdepsRepositoryManagerFactory) {
-                /* ignore */
-            } else if (winner == null || winner.getPriority() < factory.getPriority()) {
-                winner = factory;
+
+            String factoryClassName = factory.getClass().getName();
+            if (factoryClassName.equals(preferedDelegateFactoryName)) {
+                log.info("SrcdepsLocalRepositoryManager will decorate {}", factoryClassName);
+                return factory;
             }
         }
-        log.info("SrcdepsLocalRepositoryManager will decorate {} with priority {}", winner.getClass().getName(), winner.getPriority());
-        return winner;
+
+        throw new IllegalStateException(String.format(
+                "Could not find [%s] in the list of available LocalRepositoryManagerFactory implementations",
+                preferedDelegateFactoryName));
+
     }
 }

@@ -17,7 +17,8 @@
     limitations under the License.
 
 -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>org.srcdeps.mvn</groupId>
@@ -73,6 +74,7 @@
   <properties>
 
     <!-- dependencies -->
+    <version.io.takari.aether.takari-local-repository>0.11.2</version.io.takari.aether.takari-local-repository>
     <version.io.takari.maven.plugins>2.9.0</version.io.takari.maven.plugins>
     <version.junit>4.12</version.junit>
     <version.org.apache.maven>3.3.9</version.org.apache.maven>
@@ -159,6 +161,12 @@
 
   <dependencyManagement>
     <dependencies>
+    
+      <dependency>
+        <groupId>io.takari.aether</groupId>
+        <artifactId>takari-local-repository</artifactId>
+        <version>${version.io.takari.aether.takari-local-repository}</version>
+      </dependency>
 
       <dependency>
         <groupId>io.takari.maven.plugins</groupId>

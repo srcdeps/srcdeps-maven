@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import org.srcdeps.core.config.Configuration;
 import org.srcdeps.core.util.SrcdepsCoreUtils;
 
+import io.takari.aether.localrepo.TakariLocalRepositoryManagerFactory;
 import io.takari.maven.testing.TestResources;
 import io.takari.maven.testing.executor.MavenExecution;
 import io.takari.maven.testing.executor.MavenExecutionResult;
@@ -122,7 +123,7 @@ public class SrcdepsLocalRepositoryManagerTest {
         result //
                 .assertErrorFreeLog() //
                 .assertLogText(
-                        "SrcdepsLocalRepositoryManager will decorate org.eclipse.aether.internal.impl.EnhancedLocalRepositoryManagerFactory with priority 10.0") //
+                        "SrcdepsLocalRepositoryManager will decorate "+ TakariLocalRepositoryManagerFactory.class.getName()) //
         ;
 
         final String artifactPrefix = testArtifactDir + "/" + srcVersion + "/" + srcArtifactId + "-" + srcVersion;
