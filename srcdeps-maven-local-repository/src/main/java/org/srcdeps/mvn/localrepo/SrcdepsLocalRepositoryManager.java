@@ -26,10 +26,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javax.inject.Provider;
-
-import org.apache.maven.execution.MavenSession;
-import org.apache.maven.project.MavenProject;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.Artifact;
 import org.eclipse.aether.metadata.Metadata;
@@ -64,83 +60,16 @@ import org.srcdeps.core.shell.IoRedirects;
  * @author <a href="https://github.com/ppalaga">Peter Palaga</a>
  */
 public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
-
-    /**
-     * Encapsulates the loading of {@link Configuration}, may be not be instantiated before {@link MavenSession} is
-     * available.
-     */
-    private static class ConfigurationHolder {
-
-        private final Configuration configuration;
-
-        private final Path configurationLocation;
-
-        public ConfigurationHolder(final MavenSession session) {
-            super();
-            MavenProject topLevelProject = session.getTopLevelProject();
-            Path basePath = topLevelProject.getBasedir().toPath();
-            Path srcdepsYamlPath = basePath.resolve(relativeMvnSrcdepsYaml);
-            if (Files.exists(srcdepsYamlPath)) {
-                this.configurationLocation = srcdepsYamlPath;
-                log.debug("SrcdepsLocalRepositoryManager using configuration {}", configurationLocation);
-            } else {
-                throw new RuntimeException(
-                        String.format("Could not locate srcdeps configuration at [%s]", srcdepsYamlPath));
-            }
-
-            String encoding = session.getSystemProperties().getProperty("project.build.sourceEncoding");
-            if (encoding == null) {
-                encoding = session.getUserProperties().getProperty("project.build.sourceEncoding", "utf-8");
-            }
-
-            Charset cs = Charset.forName(encoding);
-            try (Reader r = Files.newBufferedReader(configurationLocation, cs)) {
-                this.configuration = new YamlConfigurationIo().read(r);
-            } catch (IOException | ConfigurationException e) {
-                throw new RuntimeException(e);
-            }
-
-        }
-
-        /**
-         * Finds the first {@link ScmRepository} associated with the given {@code artifact}. The association is given by
-         * the exact string match between the groupId of the {@code artifact} and one of the
-         * {@link ScmRepository#getSelectors() selectors} of {@link ScmRepository}
-         *
-         * @param artifact
-         * @return
-         */
-        public ScmRepository findScmRepo(Artifact artifact) {
-            final String groupId = artifact.getGroupId();
-            for (ScmRepository scmRepository : getConfiguration().getRepositories()) {
-                if (scmRepository.getSelectors().contains(groupId)) {
-                    return scmRepository;
-                }
-            }
-            throw new IllegalStateException(String
-                    .format("No srcdeps SCM repository configured in .mvn/srcdeps.yaml for groupId [%s]", groupId));
-        }
-
-        /**
-         * @return the {@link Configuration} loaded from {@link #configurationLocation}
-         */
-        public Configuration getConfiguration() {
-            return configuration;
-        }
-
-        /**
-         * Returns {@code ".mvn/srcdeps.yaml"} resolved against the top level project the current Maven request.
-         *
-         * @return
-         */
-        public Path getConfigurationLocation() {
-            return configurationLocation;
-        }
-
-    }
-
     private static final Logger log = LoggerFactory.getLogger(SrcdepsLocalRepositoryManager.class);
+
+    /** See the bin/mvn or bin/mvn.cmd script of your maven distro, where maven.multiModuleProjectDirectory is set */
+    private static final String MAVEN_MULTI_MODULE_PROJECT_DIRECTORY_PROPERTY = "maven.multiModuleProjectDirectory";
+
     public static final Path relativeMvnSrcdepsYaml = Paths.get(".mvn", "srcdeps.yaml");
+
+    /** A system property for setting an encoding other than the default {@code utf-8} for reading the
+     * {@code .mvn/srcdeps.yaml} file. */
+    private static final String SRCDEPS_ENCODING_PROPERTY = "srcdeps.encoding";
 
     private static List<String> enhanceBuildArguments(List<String> buildArguments, Path configurationLocation,
             String localRepo) {
@@ -161,26 +90,48 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
         return Collections.unmodifiableList(result);
     }
 
-    private final BuildService buildService;
-
-    private volatile ConfigurationHolder configurationHolder;
-    private final Object configurationLock = new Object();
-    private final LocalRepositoryManager delegate;
-    private final Path scrdepsDir;
     private final BuildDirectoriesManager buildDirectoriesManager;
 
-    private final Provider<MavenSession> sessionProvider;
+    private final BuildService buildService;
 
-    public SrcdepsLocalRepositoryManager(LocalRepositoryManager delegate, Provider<MavenSession> sessionProvider,
-            BuildService buildService, PathLocker<SrcVersion> pathLocker) {
+    private final Configuration configuration;
+    private final Path configurationLocation;
+
+    private final LocalRepositoryManager delegate;
+
+    private final Path scrdepsDir;
+
+    public SrcdepsLocalRepositoryManager(LocalRepositoryManager delegate, BuildService buildService, PathLocker<SrcVersion> pathLocker) {
         super();
         this.delegate = delegate;
         this.buildService = buildService;
         this.scrdepsDir = delegate.getRepository().getBasedir().toPath().getParent().resolve("srcdeps");
-        this.sessionProvider = sessionProvider;
         this.buildDirectoriesManager = new BuildDirectoriesManager(scrdepsDir, pathLocker);
-    }
 
+        String basePathString = System.getProperty(MAVEN_MULTI_MODULE_PROJECT_DIRECTORY_PROPERTY);
+        if (basePathString == null || basePathString.isEmpty()) {
+            throw new RuntimeException(String.format("The system property %s must not be null or empty",
+                    MAVEN_MULTI_MODULE_PROJECT_DIRECTORY_PROPERTY));
+        }
+        final Path basePath = Paths.get(basePathString).toAbsolutePath();
+        final Path srcdepsYamlPath = basePath.resolve(relativeMvnSrcdepsYaml);
+        if (Files.exists(srcdepsYamlPath)) {
+            this.configurationLocation = srcdepsYamlPath;
+            log.debug("SrcdepsLocalRepositoryManager using configuration {}", configurationLocation);
+        } else {
+            throw new RuntimeException(
+                    String.format("Could not locate srcdeps configuration at [%s]", srcdepsYamlPath));
+        }
+
+        final String encoding = System.getProperty(SRCDEPS_ENCODING_PROPERTY, "utf-8");
+        final Charset cs = Charset.forName(encoding);
+        try (Reader r = Files.newBufferedReader(configurationLocation, cs)) {
+            this.configuration = new YamlConfigurationIo().read(r);
+        } catch (IOException | ConfigurationException e) {
+            throw new RuntimeException(e);
+        }
+
+    }
     /**
      * Delegated to {@link #delegate}
      *
@@ -191,7 +142,6 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
     public void add(RepositorySystemSession session, LocalArtifactRegistration request) {
         delegate.add(session, request);
     }
-
     /**
      * Delegated to {@link #delegate}
      *
@@ -218,13 +168,12 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
         Artifact artifact = request.getArtifact();
         String version = artifact.getVersion();
         if (!result.isAvailable() && SrcVersion.isSrcVersion(version)) {
-            ConfigurationHolder configHolder = getConfigurationHolder();
-            Configuration config = configHolder.getConfiguration();
 
-            if (!config.isSkip()) {
-                ScmRepository scmRepo = configHolder.findScmRepo(artifact);
+            if (!configuration.isSkip()) {
+                ScmRepository scmRepo = findScmRepo(artifact);
                 SrcVersion srcVersion = SrcVersion.parse(version);
-                try (PathLock projectBuildDir = buildDirectoriesManager.openBuildDirectory(scmRepo.getIdAsPath(), srcVersion)) {
+                try (PathLock projectBuildDir = buildDirectoriesManager.openBuildDirectory(scmRepo.getIdAsPath(),
+                        srcVersion)) {
 
                     /* query the delegate again, because things may have changed since we requested the lock */
                     final LocalArtifactResult result2 = delegate.find(session, request);
@@ -232,7 +181,7 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                         return result2;
                     } else {
                         /* no change in the local repo, let's build */
-                        BuilderIo builderIo = config.getBuilderIo();
+                        BuilderIo builderIo = configuration.getBuilderIo();
                         IoRedirects ioRedirects = IoRedirects.builder() //
                                 .stdin(IoRedirects.parseUri(builderIo.getStdin())) //
                                 .stdout(IoRedirects.parseUri(builderIo.getStdout())) //
@@ -240,7 +189,7 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                                 .build();
 
                         List<String> buildArgs = enhanceBuildArguments(scmRepo.getBuildArguments(),
-                                configurationHolder.getConfigurationLocation(),
+                                configurationLocation,
                                 delegate.getRepository().getBasedir().getAbsolutePath());
 
                         BuildRequest buildRequest = BuildRequest.builder() //
@@ -249,9 +198,9 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                                 .srcVersion(srcVersion) //
                                 .buildArguments(buildArgs) //
                                 .skipTests(scmRepo.isSkipTests()) //
-                                .forwardProperties(config.getForwardProperties()) //
+                                .forwardProperties(configuration.getForwardProperties()) //
                                 .addDefaultBuildArguments(scmRepo.isAddDefaultBuildArguments()) //
-                                .verbosity(config.getVerbosity()) //
+                                .verbosity(configuration.getVerbosity()) //
                                 .ioRedirects(ioRedirects) //
                                 .build();
                         buildService.build(buildRequest);
@@ -265,7 +214,6 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                         }
                         return newResult;
                     }
-
 
                 } catch (BuildException | IOException e) {
                     log.error("Srcdeps could not build " + request, e);
@@ -284,18 +232,38 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
     }
 
     /**
-     * Loads the {@link Configuration} lazily. If multiple threads call this method while {@link #configurationHolder}
-     * is uninitialized, only the first one loads from the file system while others are waiting.
+     * Finds the first {@link ScmRepository} associated with the given {@code artifact}. The association is given by
+     * the exact string match between the groupId of the {@code artifact} and one of the
+     * {@link ScmRepository#getSelectors() selectors} of {@link ScmRepository}
      *
-     * @return a {@link Configuration}
+     * @param artifact
+     * @return
      */
-    public ConfigurationHolder getConfigurationHolder() {
-        synchronized (configurationLock) {
-            if (configurationHolder == null) {
-                configurationHolder = new ConfigurationHolder(sessionProvider.get());
+    public ScmRepository findScmRepo(Artifact artifact) {
+        final String groupId = artifact.getGroupId();
+        for (ScmRepository scmRepository : configuration.getRepositories()) {
+            if (scmRepository.getSelectors().contains(groupId)) {
+                return scmRepository;
             }
         }
-        return configurationHolder;
+        throw new IllegalStateException(String
+                .format("No srcdeps SCM repository configured in .mvn/srcdeps.yaml for groupId [%s]", groupId));
+    }
+
+    /**
+     * @return the {@link Configuration} loaded from {@link #configurationLocation}
+     */
+    public Configuration getConfiguration() {
+        return configuration;
+    }
+
+    /**
+     * Returns {@code ".mvn/srcdeps.yaml"} resolved against the top level project the current Maven request.
+     *
+     * @return
+     */
+    public Path getConfigurationLocation() {
+        return configurationLocation;
     }
 
     @Override

@@ -23,7 +23,6 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Provider;
 
-import org.apache.maven.execution.MavenSession;
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.repository.LocalRepository;
 import org.eclipse.aether.repository.LocalRepositoryManager;
@@ -71,10 +70,6 @@ public class SrcdepsRepositoryManagerFactory implements LocalRepositoryManagerFa
 
     private final float priority;
 
-    /** Passed to {@link SrcdepsLocalRepositoryManager} */
-    @Inject
-    private Provider<MavenSession> sessionProvider;
-
     public SrcdepsRepositoryManagerFactory() {
         this.priority = Float.parseFloat(
                 System.getProperty(SRCDEPS_REPOMANAGER_PRIORITY, String.valueOf(DEFAULT_SRCDEPS_REPOMANAGER_PRIORITY)));
@@ -98,8 +93,7 @@ public class SrcdepsRepositoryManagerFactory implements LocalRepositoryManagerFa
         LocalRepositoryManagerFactory delegate = lookupDelegate();
 
         log.debug("Creating a new SrcdepsLocalRepositoryManager");
-        return new SrcdepsLocalRepositoryManager(delegate.newInstance(session, repository), sessionProvider,
-                buildService, pathLocker);
+        return new SrcdepsLocalRepositoryManager(delegate.newInstance(session, repository), buildService, pathLocker);
     }
 
     /**
