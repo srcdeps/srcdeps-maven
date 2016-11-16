@@ -105,6 +105,10 @@ public class SrcdepsLocalRepositoryManagerTest {
     }
 
     public MavenExecutionResult assertBuild(String project, String srcArtifactId, String srcVersion, String... goals) throws Exception {
+        return assertBuild(project, srcArtifactId, srcVersion, new String[] {".jar", ".pom"}, goals);
+    }
+
+    public MavenExecutionResult assertBuild(String project, String srcArtifactId, String srcVersion, String[] artifactSuffixes, String... goals) throws Exception {
 
         log.info("Building test project {}", project);
 
@@ -127,8 +131,9 @@ public class SrcdepsLocalRepositoryManagerTest {
         ;
 
         final String artifactPrefix = testArtifactDir + "/" + srcVersion + "/" + srcArtifactId + "-" + srcVersion;
-        assertExists(mvnLocalRepo.resolve(artifactPrefix + ".jar"));
-        assertExists(mvnLocalRepo.resolve(artifactPrefix + ".pom"));
+        for (String suffix : artifactSuffixes) {
+            assertExists(mvnLocalRepo.resolve(artifactPrefix + suffix));
+        }
 
         return result;
     }
@@ -153,6 +158,18 @@ public class SrcdepsLocalRepositoryManagerTest {
     public void mvnGitInterdepModules() throws Exception {
         assertBuild("srcdeps-mvn-git-interdep-modules-quickstart", "srcdeps-test-artifact-service", "0.0.1-SRC-revision-56576301d21c53439bcb5c48502c723282633cc7",
                 "clean", "verify");
+    }
+
+    @Test
+    public void mvnGitParent() throws Exception {
+        String project = "srcdeps-mvn-git-parent-quickstart";
+        assertBuild(project, "srcdeps-test-artifact", "0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8", new String[] {".pom"}, "clean", "install");
+
+        final String quickstartRepoDir = "org/srcdeps/mvn/quickstarts/" + project + "/" + project;
+        String dependentVersion = "1.0-SNAPSHOT";
+        final String artifactPrefix = quickstartRepoDir + "/" + dependentVersion + "/" + project + "-" + dependentVersion;
+        assertExists(mvnLocalRepo.resolve(artifactPrefix + ".jar"));
+        assertExists(mvnLocalRepo.resolve(artifactPrefix + ".pom"));
     }
 
     @Test
