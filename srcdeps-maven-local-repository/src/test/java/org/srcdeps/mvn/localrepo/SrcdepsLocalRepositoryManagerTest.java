@@ -143,6 +143,18 @@ public class SrcdepsLocalRepositoryManagerTest {
     }
 
     @Test
+    public void mvnGitBom() throws Exception {
+        String project = "srcdeps-mvn-git-bom-quickstart";
+        assertBuild(project, "srcdeps-test-artifact", "0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8", new String[] {".pom"}, "clean", "install");
+
+        final String quickstartRepoDir = "org/srcdeps/mvn/quickstarts/" + project + "/" + project;
+        String dependentVersion = "1.0-SNAPSHOT";
+        final String artifactPrefix = quickstartRepoDir + "/" + dependentVersion + "/" + project + "-" + dependentVersion;
+        assertExists(mvnLocalRepo.resolve(artifactPrefix + ".jar"));
+        assertExists(mvnLocalRepo.resolve(artifactPrefix + ".pom"));
+    }
+
+    @Test
     public void mvnGitBranch() throws Exception {
         String project = "srcdeps-mvn-git-branch-quickstart";
         assertBuild(project, "srcdeps-test-artifact", "0.0.1-SRC-branch-morning-branch", "clean", "install");
