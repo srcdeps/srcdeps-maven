@@ -142,7 +142,7 @@ public class SrcdepsLocalRepositoryManagerTest {
         Assert.assertTrue(String.format("File or directory does not exist [%s]", path.toString()), Files.exists(path));
     }
 
-    @Test
+    // @Test
     public void mvnGitBom() throws Exception {
         String project = "srcdeps-mvn-git-bom-quickstart";
         assertBuild(project, "srcdeps-test-artifact", "0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8", new String[] {".pom"}, "clean", "install");
@@ -154,7 +154,7 @@ public class SrcdepsLocalRepositoryManagerTest {
         assertExists(mvnLocalRepo.resolve(artifactPrefix + ".pom"));
     }
 
-    @Test
+    // @Test
     public void mvnGitBranch() throws Exception {
         String project = "srcdeps-mvn-git-branch-quickstart";
         assertBuild(project, "srcdeps-test-artifact", "0.0.1-SRC-branch-morning-branch", "clean", "install");
@@ -166,13 +166,13 @@ public class SrcdepsLocalRepositoryManagerTest {
         assertExists(mvnLocalRepo.resolve(artifactPrefix + ".pom"));
     }
 
-    @Test
+    // @Test
     public void mvnGitInterdepModules() throws Exception {
         assertBuild("srcdeps-mvn-git-interdep-modules-quickstart", "srcdeps-test-artifact-service", "0.0.1-SRC-revision-56576301d21c53439bcb5c48502c723282633cc7",
                 "clean", "verify");
     }
 
-    @Test
+    // @Test
     public void mvnGitParent() throws Exception {
         String project = "srcdeps-mvn-git-parent-quickstart";
         assertBuild(project, "srcdeps-test-artifact", "0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8", new String[] {".pom"}, "clean", "install");
@@ -184,13 +184,13 @@ public class SrcdepsLocalRepositoryManagerTest {
         assertExists(mvnLocalRepo.resolve(artifactPrefix + ".pom"));
     }
 
-    @Test
+    // @Test
     public void mvnGitProfileAndProperties() throws Exception {
         MavenExecutionResult result = assertBuild("srcdeps-mvn-git-profile-and-properties-quickstart", "srcdeps-test-artifact-api",
                 "0.0.1-SRC-revision-834947e286f1f59bd6c5c3ca3823f4656bc9345b", "clean", "test");
     }
 
-    @Test
+    // @Test
     public void mvnGitRevision() throws Exception {
         String project = "srcdeps-mvn-git-revision-quickstart";
         assertBuild(project, "srcdeps-test-artifact", "0.0.1-SRC-revision-66ea95d890531f4eaaa5aa04a9b1c69b409dcd0b", "clean", "install");
@@ -202,12 +202,12 @@ public class SrcdepsLocalRepositoryManagerTest {
         assertExists(mvnLocalRepo.resolve(artifactPrefix + ".pom"));
     }
 
-    @Test
+    // @Test
     public void mvnGitRevisionNonMaster() throws Exception {
         assertBuild("srcdeps-mvn-git-revision-non-master-quickstart", "srcdeps-test-artifact", "0.0.1-SRC-revision-dbad2cdc30b5bb3ff62fc89f57987689a5f3c220", "clean", "compile");
     }
 
-    @Test
+    // @Test
     public void mvnGitTag() throws Exception {
         String project = "srcdeps-mvn-git-tag-quickstart";
         assertBuild(project, "srcdeps-test-artifact", "0.0.1-SRC-tag-0.0.1", "clean", "install");
@@ -218,4 +218,16 @@ public class SrcdepsLocalRepositoryManagerTest {
         assertExists(mvnLocalRepo.resolve(artifactPrefix + ".pom"));
     }
 
+
+    @Test
+    public void mvnwGit() throws Exception {
+        String project = "srcdeps-mvnw-git-quickstart";
+        assertBuild(project, "srcdeps-test-artifact", "0.0.2-SRC-revision-dc21a1375bd5388b5489621e71dbe6e0e70db200", new String[] {".pom"}, "clean", "install");
+
+        final String quickstartRepoDir = "org/srcdeps/mvn/quickstarts/" + project + "/" + project;
+        String dependentVersion = "1.0-SNAPSHOT";
+        final String artifactPrefix = quickstartRepoDir + "/" + dependentVersion + "/" + project + "-" + dependentVersion;
+        assertExists(mvnLocalRepo.resolve(artifactPrefix + ".jar"));
+        assertExists(mvnLocalRepo.resolve(artifactPrefix + ".pom"));
+    }
 }
