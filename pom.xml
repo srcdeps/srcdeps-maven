@@ -145,7 +145,7 @@
     <javadoc.doclint>-Xdoclint:none</javadoc.doclint>
 
     <!-- nexus-staging-maven-plugin -->
-    <!-- <autoReleaseAfterClose>true</autoReleaseAfterClose> -->
+    <autoReleaseAfterClose>true</autoReleaseAfterClose>
 
     <!-- This is where takari-lifecycle-plugin writes when deploying
          and from where the nexus-staging-maven-plugin reads when deploying to a real remote Nexus instance -->
