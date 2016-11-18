@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import org.srcdeps.core.BuildService;
 import org.srcdeps.core.SrcVersion;
 import org.srcdeps.core.fs.PathLocker;
+import org.srcdeps.mvn.config.ConfigurationProducer;
 
 import io.takari.aether.localrepo.TakariLocalRepositoryManagerFactory;
 
@@ -66,6 +67,9 @@ public class SrcdepsRepositoryManagerFactory implements LocalRepositoryManagerFa
     @Inject
     private PathLocker<SrcVersion> pathLocker;
 
+    @Inject
+    private ConfigurationProducer configurationProducer;
+
     private final String preferedDelegateFactoryName;
 
     private final float priority;
@@ -93,7 +97,7 @@ public class SrcdepsRepositoryManagerFactory implements LocalRepositoryManagerFa
         LocalRepositoryManagerFactory delegate = lookupDelegate();
 
         log.debug("Creating a new SrcdepsLocalRepositoryManager");
-        return new SrcdepsLocalRepositoryManager(delegate.newInstance(session, repository), buildService, pathLocker);
+        return new SrcdepsLocalRepositoryManager(delegate.newInstance(session, repository), buildService, pathLocker, configurationProducer);
     }
 
     /**
