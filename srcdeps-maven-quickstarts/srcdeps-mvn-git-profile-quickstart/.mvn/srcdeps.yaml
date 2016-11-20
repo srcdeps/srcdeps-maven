@@ -26,7 +26,10 @@
 configModelVersion: 1.0
 
 failWithAnyOfArguments:
+- -Psrcdeps-profile
 - -Dsrcdeps-fail-property
+
+addDefaultFailWithAnyOfArguments: false
 
 # `repositories` - a map of SCM repositories.
 #

@@ -14,16 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.srcdeps.mvn;
+package org.srcdeps.mvn.quickstarts.git.parent;
 
-public interface Constants {
-
-    /** See the bin/mvn or bin/mvn.cmd script of your maven distro, where maven.multiModuleProjectDirectory is set */
-    String MAVEN_MULTI_MODULE_PROJECT_DIRECTORY_PROPERTY = "maven.multiModuleProjectDirectory";
-
-
-    /** A system property for setting an encoding other than the default {@code utf-8} for reading the
-     * {@code .mvn/srcdeps.yaml} file. */
-    String SRCDEPS_ENCODING_PROPERTY = "srcdeps.encoding";
-
+import org.l2x6.maven.srcdeps.itest.api.App;
+public class AppClient {
+    private final App app = new App();
+    public App getApp() {
+        return app;
+    }
 }

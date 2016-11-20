@@ -22,9 +22,11 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import javax.inject.Named;
-import javax.inject.Singleton;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +36,6 @@ import org.srcdeps.core.config.ConfigurationException;
 import org.srcdeps.mvn.Constants;
 
 @Named
-@Singleton
 public class ConfigurationProducer {
     private static final Logger log = LoggerFactory.getLogger(ConfigurationProducer.class);
 
@@ -42,9 +43,10 @@ public class ConfigurationProducer {
     private final Configuration configuration;
     private final Path configurationLocation;
 
+    private final Set<String> mergedFailWithAnyOfArguments;
+
     public ConfigurationProducer() {
         super();
-
 
         String basePathString = System.getProperty(Constants.MAVEN_MULTI_MODULE_PROJECT_DIRECTORY_PROPERTY);
         if (basePathString == null || basePathString.isEmpty()) {
@@ -69,6 +71,13 @@ public class ConfigurationProducer {
             throw new RuntimeException(e);
         }
 
+        Set<String> failWithAnyOfArguments = new LinkedHashSet<>();
+        if (configuration.isAddDefaultFailWithAnyOfArguments()) {
+            failWithAnyOfArguments.addAll(Constants.DEFAULT_FAIL_WITH_ANY_OF_ARGUMENTS);
+        }
+        failWithAnyOfArguments.addAll(configuration.getFailWithAnyOfArguments());
+        this.mergedFailWithAnyOfArguments = Collections.unmodifiableSet(failWithAnyOfArguments);
+
     }
 
     public Configuration getConfiguration() {
@@ -77,5 +86,9 @@ public class ConfigurationProducer {
 
     public Path getConfigurationLocation() {
         return configurationLocation;
+    }
+
+    public Set<String> getMergedFailWithAnyOfArguments() {
+        return mergedFailWithAnyOfArguments;
     }
 }

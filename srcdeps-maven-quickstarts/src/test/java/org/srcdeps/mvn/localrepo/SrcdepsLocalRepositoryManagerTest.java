@@ -48,6 +48,8 @@ import io.takari.maven.testing.executor.junit.MavenJUnitTestRunner;
 @RunWith(MavenJUnitTestRunner.class)
 @MavenVersions({ "3.3.1" })
 public class SrcdepsLocalRepositoryManagerTest {
+    private static final String ORG_L2X6_MAVEN_SRCDEPS_ITEST = "org/l2x6/maven/srcdeps/itest";
+
     private static final Logger log = LoggerFactory.getLogger(SrcdepsLocalRepositoryManagerTest.class);
 
     private static final Path mvnLocalRepo;
@@ -108,13 +110,10 @@ public class SrcdepsLocalRepositoryManagerTest {
         return assertBuild(project, srcArtifactId, srcVersion, new String[] {".jar", ".pom"}, goals);
     }
 
-    public MavenExecutionResult assertBuild(String project, String srcArtifactId, String srcVersion, String[] artifactSuffixes, String... goals) throws Exception {
-
+    public MavenExecutionResult build(String project, String srcArtifactId, String... goals) throws Exception {
         log.info("Building test project {}", project);
 
-        String srcGroupDir = "org/l2x6/maven/srcdeps/itest";
-        SrcdepsCoreUtils.deleteDirectory(mvnLocalRepo.resolve(srcGroupDir));
-        final String testArtifactDir = srcGroupDir  + "/" + srcArtifactId;
+        SrcdepsCoreUtils.deleteDirectory(mvnLocalRepo.resolve(ORG_L2X6_MAVEN_SRCDEPS_ITEST));
 
         final String quickstartRepoDir = "org/l2x6/srcdeps/quickstarts/" + project;
         SrcdepsCoreUtils.deleteDirectory(mvnLocalRepo.resolve(quickstartRepoDir));
@@ -123,7 +122,14 @@ public class SrcdepsLocalRepositoryManagerTest {
                 // .withCliOption("-X") //
                 .withCliOptions("-Dmaven.repo.local=" + mvnLocalRepo.toAbsolutePath().toString()).withCliOption("-s")
                 .withCliOption(mrmSettingsXmlPath);
-        MavenExecutionResult result = execution.execute(goals);
+        return execution.execute(goals);
+    }
+
+    public MavenExecutionResult assertBuild(String project, String srcArtifactId, String srcVersion, String[] artifactSuffixes, String... goals) throws Exception {
+        SrcdepsCoreUtils.deleteDirectory(mvnLocalRepo.resolve(ORG_L2X6_MAVEN_SRCDEPS_ITEST));
+        final String testArtifactDir = ORG_L2X6_MAVEN_SRCDEPS_ITEST  + "/" + srcArtifactId;
+
+        MavenExecutionResult result = build(project, srcArtifactId, goals);
         result //
                 .assertErrorFreeLog() //
                 .assertLogText(
@@ -140,6 +146,10 @@ public class SrcdepsLocalRepositoryManagerTest {
 
     public static void assertExists(Path path) {
         Assert.assertTrue(String.format("File or directory does not exist [%s]", path.toString()), Files.exists(path));
+    }
+
+    public static void assertNotExists(Path path) {
+        Assert.assertTrue(String.format("File or directory exists [%s], but should not", path.toString()), !Files.exists(path));
     }
 
     @Test
@@ -203,6 +213,76 @@ public class SrcdepsLocalRepositoryManagerTest {
     }
 
     @Test
+    public void mvnFailWithArgumentsDependency() throws Exception {
+        String project = "srcdeps-mvn-git-revision-quickstart";
+        MavenExecutionResult result = build(project, "srcdeps-test-artifact", "clean", "release:prepare");
+        result
+        .assertLogText(
+                "SrcdepsLocalRepositoryManager will decorate "+ TakariLocalRepositoryManagerFactory.class.getName()) //
+        .assertLogText("This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:0.0.1-SRC-revision-66ea95d890531f4eaaa5aa04a9b1c69b409dcd0b] and release:prepare")
+        .assertLogText("BUILD FAILURE");
+
+    }
+
+    @Test
+    public void mvnFailWithArgumentsBom() throws Exception {
+        String project = "srcdeps-mvn-git-bom-quickstart";
+        MavenExecutionResult result = build(project, "srcdeps-test-artifact", "clean", "release:prepare");
+        result
+        .assertLogText(
+                "SrcdepsLocalRepositoryManager will decorate "+ TakariLocalRepositoryManagerFactory.class.getName()) //
+        .assertLogText("This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-api:0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8] and release:prepare")
+        .assertLogText("BUILD FAILURE");
+    }
+
+
+    @Test
+    public void mvnFailWithArgumentsParent() throws Exception {
+        String project = "srcdeps-mvn-git-parent-quickstart";
+        MavenExecutionResult result = build(project, "srcdeps-test-artifact", "clean", "release:prepare");
+        result
+        .assertLogText(
+                "SrcdepsLocalRepositoryManager will decorate "+ TakariLocalRepositoryManagerFactory.class.getName()) //
+        .assertLogText("This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8] and release:prepare")
+        .assertLogText("BUILD FAILURE");
+    }
+
+    @Test
+    public void mvnFailWithArgumentsProfile() throws Exception {
+        String project = "srcdeps-mvn-git-profile-quickstart";
+        MavenExecutionResult result = build(project, "srcdeps-test-artifact", "clean", "install", "-Psrcdeps-profile");
+        result
+        .assertLogText(
+                "SrcdepsLocalRepositoryManager will decorate "+ TakariLocalRepositoryManagerFactory.class.getName()) //
+        .assertLogText("This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-api:0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8] and -Psrcdeps-profile")
+        .assertLogText("BUILD FAILURE");
+    }
+
+    @Test
+    public void mvnFailWithArgumentsPropertyCli() throws Exception {
+        String project = "srcdeps-mvn-git-bom-quickstart";
+        MavenExecutionResult result = build(project, "srcdeps-test-artifact", "clean", "install", "-Dsrcdeps-fail-property");
+        result
+        .assertLogText(
+                "SrcdepsLocalRepositoryManager will decorate "+ TakariLocalRepositoryManagerFactory.class.getName()) //
+        .assertLogText("This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-api:0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8] and -Dsrcdeps-fail-property")
+        .assertLogText("BUILD FAILURE");
+    }
+
+
+    @Test
+    public void mvnFailWithArgumentsPropertyPom() throws Exception {
+        String project = "srcdeps-mvn-git-profile-quickstart";
+        MavenExecutionResult result = build(project, "srcdeps-test-artifact", "clean", "install", "-Psrcdeps-property-profile");
+        result
+        .assertLogText(
+                "SrcdepsLocalRepositoryManager will decorate "+ TakariLocalRepositoryManagerFactory.class.getName()) //
+        .assertLogText("This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-api:0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8] and -Dsrcdeps-fail-property")
+        .assertLogText("BUILD FAILURE");
+    }
+
+
+    @Test
     public void mvnGitRevisionNonMaster() throws Exception {
         assertBuild("srcdeps-mvn-git-revision-non-master-quickstart", "srcdeps-test-artifact", "0.0.1-SRC-revision-dbad2cdc30b5bb3ff62fc89f57987689a5f3c220", "clean", "compile");
     }
@@ -217,7 +297,6 @@ public class SrcdepsLocalRepositoryManagerTest {
         assertExists(mvnLocalRepo.resolve(artifactPrefix + ".jar"));
         assertExists(mvnLocalRepo.resolve(artifactPrefix + ".pom"));
     }
-
 
     @Test
     public void mvnwGit() throws Exception {

@@ -46,7 +46,9 @@
   </developers>
 
   <modules>
+    <module>srcdeps-maven-base</module>
     <module>srcdeps-maven-local-repository</module>
+    <module>srcdeps-maven-enforcer</module>
     <module>srcdeps-maven-quickstarts</module>
   </modules>
 
@@ -194,7 +196,25 @@
 
       <dependency>
         <groupId>org.apache.maven</groupId>
+        <artifactId>maven-artifact</artifactId>
+        <version>${version.org.apache.maven}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.maven</groupId>
         <artifactId>maven-core</artifactId>
+        <version>${version.org.apache.maven}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.maven</groupId>
+        <artifactId>maven-model</artifactId>
+        <version>${version.org.apache.maven}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.maven</groupId>
+        <artifactId>maven-plugin-api</artifactId>
         <version>${version.org.apache.maven}</version>
       </dependency>
 
@@ -235,6 +255,21 @@
       <dependency>
         <groupId>org.srcdeps.mvn</groupId>
         <artifactId>srcdeps-maven-local-repository</artifactId>
+        <version>2.0.3-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>org.srcdeps.mvn</groupId>
+        <artifactId>srcdeps-maven-base</artifactId>
+        <version>2.0.3-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>org.srcdeps.mvn</groupId>
+        <artifactId>srcdeps-maven-enforcer</artifactId>
+        <version>2.0.3-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>org.srcdeps.mvn</groupId>
+        <artifactId>srcdeps-maven-quickstarts</artifactId>
         <version>2.0.3-SNAPSHOT</version>
       </dependency>
 
