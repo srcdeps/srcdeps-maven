@@ -30,7 +30,7 @@
   <packaging>takari-maven-component</packaging>
 
   <name>Srcdeps Maven Quickstarts</name>
-  <description>A set of sef contained projects to learn how to configure srcdeps in various Maven scenarios.
+  <description>A set of self contained projects to learn how to configure srcdeps in various Maven scenarios.
       At the same time, these projects are run as integration tests.</description>
 
   <dependencies>
