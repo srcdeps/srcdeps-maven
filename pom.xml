@@ -46,7 +46,10 @@
   </developers>
 
   <modules>
+    <module>srcdeps-maven-base</module>
     <module>srcdeps-maven-local-repository</module>
+    <module>srcdeps-maven-enforcer</module>
+    <module>srcdeps-maven-quickstarts</module>
   </modules>
 
   <scm>
@@ -84,7 +87,7 @@
          around https://github.com/apache/maven/blob/master/pom.xml#L61 -->
     <version.org.eclipse.sisu>0.3.2</version.org.eclipse.sisu>
     <version.org.slf4j>1.7.5</version.org.slf4j>
-    <version.org.srcdeps.core>2.0.2</version.org.srcdeps.core>
+    <version.org.srcdeps.core>2.0.5</version.org.srcdeps.core>
 
     <!--
       Maven plugin versions
@@ -193,7 +196,25 @@
 
       <dependency>
         <groupId>org.apache.maven</groupId>
+        <artifactId>maven-artifact</artifactId>
+        <version>${version.org.apache.maven}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.maven</groupId>
         <artifactId>maven-core</artifactId>
+        <version>${version.org.apache.maven}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.maven</groupId>
+        <artifactId>maven-model</artifactId>
+        <version>${version.org.apache.maven}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.maven</groupId>
+        <artifactId>maven-plugin-api</artifactId>
         <version>${version.org.apache.maven}</version>
       </dependency>
 
@@ -229,6 +250,27 @@
         <groupId>org.srcdeps.core</groupId>
         <artifactId>srcdeps-core</artifactId>
         <version>${version.org.srcdeps.core}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.srcdeps.mvn</groupId>
+        <artifactId>srcdeps-maven-local-repository</artifactId>
+        <version>2.0.3-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>org.srcdeps.mvn</groupId>
+        <artifactId>srcdeps-maven-base</artifactId>
+        <version>2.0.3-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>org.srcdeps.mvn</groupId>
+        <artifactId>srcdeps-maven-enforcer</artifactId>
+        <version>2.0.3-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>org.srcdeps.mvn</groupId>
+        <artifactId>srcdeps-maven-quickstarts</artifactId>
+        <version>2.0.3-SNAPSHOT</version>
       </dependency>
 
       <dependency>
