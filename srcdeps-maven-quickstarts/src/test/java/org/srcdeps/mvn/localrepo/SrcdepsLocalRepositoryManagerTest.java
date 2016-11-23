@@ -269,6 +269,17 @@ public class SrcdepsLocalRepositoryManagerTest {
         .assertLogText("BUILD FAILURE");
     }
 
+    @Test
+    public void mvnFailWithArgumentsPropertyCliOverride() throws Exception {
+        String project = "srcdeps-mvn-git-revision-quickstart";
+        MavenExecutionResult result = build(project, "srcdeps-test-artifact", "clean", "install",
+                "-Dsrcdeps-fail-property-cli", "-Dsrcdeps.failWithAnyOfArguments=-Dsrcdeps-fail-property-cli");
+        result.assertLogText(
+                "SrcdepsLocalRepositoryManager will decorate " + TakariLocalRepositoryManagerFactory.class.getName()) //
+                .assertLogText(
+                        "This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:0.0.1-SRC-revision-66ea95d890531f4eaaa5aa04a9b1c69b409dcd0b] and -Dsrcdeps-fail-property-cli")
+                .assertLogText("BUILD FAILURE");
+    }
 
     @Test
     public void mvnFailWithArgumentsPropertyPom() throws Exception {

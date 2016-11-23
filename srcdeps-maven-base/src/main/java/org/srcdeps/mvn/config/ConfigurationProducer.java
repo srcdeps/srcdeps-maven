@@ -32,7 +32,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srcdeps.config.yaml.YamlConfigurationIo;
 import org.srcdeps.core.config.Configuration;
+import org.srcdeps.core.config.Configuration.Builder;
 import org.srcdeps.core.config.ConfigurationException;
+import org.srcdeps.core.config.ConfigurationOverrideVisitor;
 import org.srcdeps.mvn.Constants;
 
 @Named
@@ -66,7 +68,10 @@ public class ConfigurationProducer {
         final String encoding = System.getProperty(Constants.SRCDEPS_ENCODING_PROPERTY, "utf-8");
         final Charset cs = Charset.forName(encoding);
         try (Reader r = Files.newBufferedReader(configurationLocation, cs)) {
-            this.configuration = new YamlConfigurationIo().read(r);
+            Builder builder = new YamlConfigurationIo().read(r);
+            ConfigurationOverrideVisitor visitor = new ConfigurationOverrideVisitor(System.getProperties());
+            builder.accept(visitor);
+            this.configuration = builder.build();
         } catch (IOException | ConfigurationException e) {
             throw new RuntimeException(e);
         }

@@ -23,7 +23,6 @@ build_script:
   - .\mvnw.cmd clean install -B -Prun-its
 on_failure:
   - echo "failed"
-  - type srcdeps-maven-local-repository\target\test-projects\SrcdepsLocalRepositoryManagerTest_mvnGitBranch[3.3.1]_mvnGitBranch\log.txt
-  - type srcdeps-maven-local-repository\target\test-projects\SrcdepsLocalRepositoryManagerTest_mvnGitRevision[3.3.1]_mvnGitRevision\log.txt
+  - type srcdeps-maven-quickstarts\target\test-projects\SrcdepsLocalRepositoryManagerTest_mvnGitInterdepModules[3.3.1]_srcdeps-mvn-git-interdep-modules-quickstart\log.txt
 cache:
   - C:\Users\appveyor\.m2\wrapper
