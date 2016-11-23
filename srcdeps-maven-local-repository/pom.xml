@@ -23,7 +23,7 @@
   <parent>
     <groupId>org.srcdeps.mvn</groupId>
     <artifactId>srcdeps-maven-parent</artifactId>
-    <version>2.1.0</version>
+    <version>2.1.1-SNAPSHOT</version>
   </parent>
 
   <artifactId>srcdeps-maven-local-repository</artifactId>
