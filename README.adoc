@@ -1,11 +1,11 @@
-= Srcdeps
+= Srcdeps Maven
 
 ifdef::env-github[]
-[link=https://travis-ci.org/l2x6/srcdeps]
-image:https://travis-ci.org/l2x6/srcdeps.svg?branch=master["Build Status", link="https://travis-ci.org/l2x6/srcdeps-maven-plugin"]
+[link=https://travis-ci.org/srcdeps/srcdeps-maven]
+image:https://travis-ci.org/srcdeps/srcdeps-maven.svg?branch=master["Build Status", link="https://travis-ci.org/srcdeps/srcdeps-maven"]
 endif::[]
 
-A set of tools for building dependencies from their sources during the build.
+A Maven Core Extension for building dependencies from their sources during the build.
 
 = What is this good for?
 
@@ -17,8 +17,10 @@ depend on `account-balance-microservice` at git revision `abc123`, without requi
 
 == Srcdeps support for Maven
 
-Currently, the srcdeps toolkit supports only Maven 3.3.1+, although the `srcdeps-core` library has an ambition to be
-generic enough so that a support for other Java build tools such as Gradle or sbt can be added (contributions are welcome!).
+Currently, the srcdeps toolkit supports only Maven 3.3.1+, although the
+link:https://github.com/srcdeps/srcdeps-core[Srcdeps Core]
+library has an ambition to be generic enough so that a support for other Java build tools such as Gradle or sbt can be
+added (contributions are welcome!).
 
 The present solution for Maven is leveraging the concept of Maven Core Extensions introduced in Maven 3.3.1.
 In particular, we provide an implementation of `LocalRepositoryManager` that delegates all the usual artifact
