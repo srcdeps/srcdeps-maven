@@ -18,7 +18,8 @@
 # `.mvn/srcdeps.yaml` - the srcdeps configuration file
 
 # Note that this is a minimal srcdeps.yaml file that constains only options relevant for this quickstart.
-# For full reference, see `srcdeps.yaml.adoc` in the top level folder of srcdeps source tree.
+# The full srcdeps.yaml reference can be found under https://github.com/srcdeps/srcdeps-core/tree/master/doc/srcdeps.yaml
+
 
 # `configModelVersion` exists just in case we'll have to change the schema of srcdeps.yaml in the future.
 #
