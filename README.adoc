@@ -44,6 +44,11 @@ are built and installed while they are looked up.
     <artifactId>srcdeps-maven-local-repository</artifactId>
     <version>2.1.0</version><!-- @srcdeps.version@ -->
   </extension>
+  <extension>
+    <groupId>org.srcdeps.mvn</groupId>
+    <artifactId>srcdeps-maven-enforcer</artifactId><!-- to prevent srcdeps in releases -->
+    <version>2.1.0</version><!-- @srcdeps.version@ -->
+  </extension>
 </extensions>
 ----
 
@@ -51,21 +56,66 @@ are built and installed while they are looked up.
 
 A few settings have to be configured in `.mvn/srcdeps.yaml` file. Especially, the mapping from groupId's of
 dependencies to SCM repositiries where their sources reside. This is a minimal `.mvn/srcdeps.yaml` file. Please
-refer to link:srcdeps.yaml.adoc[srcdeps.yaml.adoc] for full reference.
+refer to link:https://github.com/srcdeps/srcdeps-core/tree/master/doc/srcdeps.yaml[srcdeps.yaml reference] for full
+reference.
 
 [source,yaml]
 ----
-configModelVersion: 1.0
+configModelVersion: 1.1
 repositories:
-  srcdepsItestRepo:
+  org.my-group:
     selectors:
-    - org.l2x6.maven.srcdeps.itest # if one of the selectors matches the groupId of a -SRC- dependency,
-                                   # then the urls will be used to build that dependency
+    - org.my-group:*:*  # if one of the selectors matches the groupId of a -SRC- dependency,
+                        # then the following urls will be used to build that dependency
     urls:
-    - https://github.com/srcdeps/srcdeps-test-artifact.git # If you list multiple SCM repos here
-                                                        # then the first successful checkout will count
+    - https://github.com/my-org/my-project.git  # If you list multiple SCM repos here then only
+                                                # the first successful checkout will count
 
 ----
+
+
+=== Override `.mvn/srcdeps.yaml` options on the command line
+
+All options configurable in `.mvn/srcdeps.yaml` can be overriden through system properties passed on the command
+line. To construct the property name, just take the `srcdeps.` prefix and append the `.mvn/srcdeps.yaml` DOM
+path to the option you want to override.
+
+For example, to dynamically change the verbosity you would have to issue something like
+
+[source,shell]
+----
+mvn ... -Dsrcdeps.verbosity=debug
+----
+
+To *replace* `https://github.com/my-org/my-project.git` with your local git repository in the above
+example, you need to invoke something like
+
+[source,shell]
+----
+mvn ... -Dsrcdeps.repositories[org.my-group].urls[0]=/home/my-user/repos/my-project/.git
+----
+
+To *append* your local git repository to the list of URLs in the above example, you need to invoke something like
+
+[source,shell]
+----
+mvn ... -Dsrcdeps.repositories[org.my-group].urls[1]=/home/my-user/repos/my-project/.git
+----
+
+To *prepend* your local git repository to the list of URLs in the above example, you need to invoke something like
+
+[source,shell]
+----
+mvn ... -Dsrcdeps.repositories[org.my-group].urls[-1]=/home/my-user/repos/my-project/.git
+----
+
+To *replace the whole list* with a new list of URLs in the above example, you need to invoke something like
+
+[source,shell]
+----
+mvn ... -Dsrcdeps.repositories[org.my-group].urls=/home/my-user/repos/my-project/.git,https://github.com/my-user/my-project.git
+----
+
 
 === Examples a.k.a. Quickstarts
 
@@ -87,6 +137,7 @@ demonstrates how a project can depend on a source revision of another project.
 * And finally, `srcdeps-core` builds the artifacts and installs them to the local Maven repository
 * For Maven, the `-SRC-` dependencies are build only if they are not found in local repository - so they prolong the
   build only when upgrading.
+
 
 == Misc.
 
