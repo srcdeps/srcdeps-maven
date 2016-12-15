@@ -24,10 +24,12 @@
 # `configModelVersion` exists just in case we'll have to change the schema of srcdeps.yaml in the future.
 #
 # Required, no default, only 1.0 supported at the moment
-configModelVersion: 1.1
+configModelVersion: 2.0
 
-failWithAnyOfArguments:
-- -Dsrcdeps-fail-property
+maven:
+  failWith:
+    properties:
+    - srcdeps-fail-property
 
 # `repositories` - a map of SCM repositories.
 #

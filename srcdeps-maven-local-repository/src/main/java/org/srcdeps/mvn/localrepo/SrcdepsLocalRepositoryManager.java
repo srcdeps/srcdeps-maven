@@ -149,7 +149,7 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                         return result2;
                     } else {
                         /* no change in the local repo, let's build */
-                        BuilderIo builderIo = configuration.getBuilderIo();
+                        BuilderIo builderIo = scmRepo.getBuilderIo();
                         IoRedirects ioRedirects = IoRedirects.builder() //
                                 .stdin(IoRedirects.parseUri(builderIo.getStdin())) //
                                 .stdout(IoRedirects.parseUri(builderIo.getStdout())) //
@@ -165,11 +165,13 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                                 .scmUrls(scmRepo.getUrls()) //
                                 .srcVersion(srcVersion) //
                                 .buildArguments(buildArgs) //
+                                .timeoutMs(scmRepo.getBuildTimeout().toMilliseconds()) //
                                 .skipTests(scmRepo.isSkipTests()) //
                                 .forwardProperties(configuration.getForwardProperties()) //
                                 .addDefaultBuildArguments(scmRepo.isAddDefaultBuildArguments()) //
-                                .verbosity(configuration.getVerbosity()) //
+                                .verbosity(scmRepo.getVerbosity()) //
                                 .ioRedirects(ioRedirects) //
+                                .versionsMavenPluginVersion(scmRepo.getMaven().getVersionsMavenPluginVersion())
                                 .build();
                         buildService.build(buildRequest);
 

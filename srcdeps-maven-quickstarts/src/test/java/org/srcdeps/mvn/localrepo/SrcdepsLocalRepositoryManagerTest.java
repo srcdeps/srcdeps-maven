@@ -30,7 +30,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.srcdeps.core.config.Configuration;
+import org.srcdeps.core.config.Maven;
 import org.srcdeps.core.util.SrcdepsCoreUtils;
 
 import io.takari.aether.localrepo.TakariLocalRepositoryManagerFactory;
@@ -95,7 +95,7 @@ public class SrcdepsLocalRepositoryManagerTest {
 
         SrcdepsCoreUtils.ensureDirectoryExistsAndEmpty(mvnLocalRepo);
 
-        System.setProperty(Configuration.SRCDEPS_MVN_SETTINGS_PROP, mrmSettingsXmlPath);
+        System.setProperty(Maven.getSrcdepsMavenSettingsProperty(), mrmSettingsXmlPath);
 
         Assert.assertTrue("[" + mrmSettingsXmlPath + "] should exist", Files.exists(Paths.get(mrmSettingsXmlPath)));
         Assert.assertNotNull("project.build.sourceEncoding property must be set", encoding);
@@ -219,7 +219,7 @@ public class SrcdepsLocalRepositoryManagerTest {
         result
         .assertLogText(
                 "SrcdepsLocalRepositoryManager will decorate "+ TakariLocalRepositoryManagerFactory.class.getName()) //
-        .assertLogText("This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:0.0.1-SRC-revision-66ea95d890531f4eaaa5aa04a9b1c69b409dcd0b] and release:prepare")
+        .assertLogText("This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:0.0.1-SRC-revision-66ea95d890531f4eaaa5aa04a9b1c69b409dcd0b] and goal [release:prepare]")
         .assertLogText("BUILD FAILURE");
 
     }
@@ -231,7 +231,7 @@ public class SrcdepsLocalRepositoryManagerTest {
         result
         .assertLogText(
                 "SrcdepsLocalRepositoryManager will decorate "+ TakariLocalRepositoryManagerFactory.class.getName()) //
-        .assertLogText("This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-api:0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8] and release:prepare")
+        .assertLogText("This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-api:0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8] and goal [release:prepare]")
         .assertLogText("BUILD FAILURE");
     }
 
@@ -243,7 +243,7 @@ public class SrcdepsLocalRepositoryManagerTest {
         result
         .assertLogText(
                 "SrcdepsLocalRepositoryManager will decorate "+ TakariLocalRepositoryManagerFactory.class.getName()) //
-        .assertLogText("This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8] and release:prepare")
+        .assertLogText("This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8] and goal [release:prepare]")
         .assertLogText("BUILD FAILURE");
     }
 
@@ -254,7 +254,7 @@ public class SrcdepsLocalRepositoryManagerTest {
         result
         .assertLogText(
                 "SrcdepsLocalRepositoryManager will decorate "+ TakariLocalRepositoryManagerFactory.class.getName()) //
-        .assertLogText("This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-api:0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8] and -Psrcdeps-profile")
+        .assertLogText("This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-api:0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8] and profile [srcdeps-profile]")
         .assertLogText("BUILD FAILURE");
     }
 
@@ -265,7 +265,7 @@ public class SrcdepsLocalRepositoryManagerTest {
         result
         .assertLogText(
                 "SrcdepsLocalRepositoryManager will decorate "+ TakariLocalRepositoryManagerFactory.class.getName()) //
-        .assertLogText("This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-api:0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8] and -Dsrcdeps-fail-property")
+        .assertLogText("This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-api:0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8] and property [srcdeps-fail-property]")
         .assertLogText("BUILD FAILURE");
     }
 
@@ -273,11 +273,11 @@ public class SrcdepsLocalRepositoryManagerTest {
     public void mvnFailWithArgumentsPropertyCliOverride() throws Exception {
         String project = "srcdeps-mvn-git-revision-quickstart";
         MavenExecutionResult result = build(project, "srcdeps-test-artifact", "clean", "install",
-                "-Dsrcdeps-fail-property-cli", "-Dsrcdeps.failWithAnyOfArguments=-Dsrcdeps-fail-property-cli");
+                "-Dsrcdeps-fail-property-cli", "-Dsrcdeps.maven.failWith.properties=srcdeps-fail-property-cli");
         result.assertLogText(
                 "SrcdepsLocalRepositoryManager will decorate " + TakariLocalRepositoryManagerFactory.class.getName()) //
                 .assertLogText(
-                        "This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:0.0.1-SRC-revision-66ea95d890531f4eaaa5aa04a9b1c69b409dcd0b] and -Dsrcdeps-fail-property-cli")
+                        "This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:0.0.1-SRC-revision-66ea95d890531f4eaaa5aa04a9b1c69b409dcd0b] and property [srcdeps-fail-property-cli]")
                 .assertLogText("BUILD FAILURE");
     }
 
@@ -288,7 +288,7 @@ public class SrcdepsLocalRepositoryManagerTest {
         result
         .assertLogText(
                 "SrcdepsLocalRepositoryManager will decorate "+ TakariLocalRepositoryManagerFactory.class.getName()) //
-        .assertLogText("This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-api:0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8] and -Dsrcdeps-fail-property")
+        .assertLogText("This build was configured to fail if there is a source dependency [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-api:0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8] and property [srcdeps-fail-property]")
         .assertLogText("BUILD FAILURE");
     }
 

@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-configModelVersion: 1.1
+configModelVersion: 2.0
 verbosity: info
 repositories:
   org.l2x6.maven.srcdeps.itest:

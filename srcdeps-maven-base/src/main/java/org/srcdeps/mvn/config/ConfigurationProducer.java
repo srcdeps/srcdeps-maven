@@ -22,9 +22,6 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
 
 import javax.inject.Named;
 
@@ -32,9 +29,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srcdeps.config.yaml.YamlConfigurationIo;
 import org.srcdeps.core.config.Configuration;
-import org.srcdeps.core.config.Configuration.Builder;
 import org.srcdeps.core.config.ConfigurationException;
-import org.srcdeps.core.config.ConfigurationOverrideVisitor;
+import org.srcdeps.core.config.tree.walk.DefaultsAndInheritanceVisitor;
+import org.srcdeps.core.config.tree.walk.OverrideVisitor;
 import org.srcdeps.mvn.Constants;
 
 @Named
@@ -44,8 +41,6 @@ public class ConfigurationProducer {
     public static final Path relativeMvnSrcdepsYaml = Paths.get(".mvn", "srcdeps.yaml");
     private final Configuration configuration;
     private final Path configurationLocation;
-
-    private final Set<String> mergedFailWithAnyOfArguments;
 
     public ConfigurationProducer() {
         super();
@@ -65,24 +60,16 @@ public class ConfigurationProducer {
                     String.format("Could not locate srcdeps configuration at [%s]", srcdepsYamlPath));
         }
 
-        final String encoding = System.getProperty(Constants.SRCDEPS_ENCODING_PROPERTY, "utf-8");
+        final String encoding = System.getProperty(Configuration.getSrcdepsEncodingProperty(), "utf-8");
         final Charset cs = Charset.forName(encoding);
         try (Reader r = Files.newBufferedReader(configurationLocation, cs)) {
-            Builder builder = new YamlConfigurationIo().read(r);
-            ConfigurationOverrideVisitor visitor = new ConfigurationOverrideVisitor(System.getProperties());
-            builder.accept(visitor);
-            this.configuration = builder.build();
+            this.configuration = new YamlConfigurationIo().read(r) //
+                    .accept(new OverrideVisitor(System.getProperties())) //
+                    .accept(new DefaultsAndInheritanceVisitor()) //
+                    .build();
         } catch (IOException | ConfigurationException e) {
             throw new RuntimeException(e);
         }
-
-        Set<String> failWithAnyOfArguments = new LinkedHashSet<>();
-        if (configuration.isAddDefaultFailWithAnyOfArguments()) {
-            failWithAnyOfArguments.addAll(Constants.DEFAULT_FAIL_WITH_ANY_OF_ARGUMENTS);
-        }
-        failWithAnyOfArguments.addAll(configuration.getFailWithAnyOfArguments());
-        this.mergedFailWithAnyOfArguments = Collections.unmodifiableSet(failWithAnyOfArguments);
-
     }
 
     public Configuration getConfiguration() {
@@ -91,9 +78,5 @@ public class ConfigurationProducer {
 
     public Path getConfigurationLocation() {
         return configurationLocation;
-    }
-
-    public Set<String> getMergedFailWithAnyOfArguments() {
-        return mergedFailWithAnyOfArguments;
     }
 }

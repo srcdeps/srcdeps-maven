@@ -16,8 +16,6 @@
  */
 package org.srcdeps.mvn.enforcer;
 
-import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
@@ -40,14 +38,15 @@ import org.apache.maven.project.MavenProject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srcdeps.core.SrcVersion;
+import org.srcdeps.core.config.MavenFailWith;
 import org.srcdeps.mvn.config.ConfigurationProducer;
 
 /**
  * A {@link ProjectExecutionListener} that implements the {@code failWithAnyOfArguments} srcdeps configuration option.
  * {@link SrcdepsEnforcer} checks the setup of the given Maven project and a given Maven execution request for arguments
  * present in {@code failWithAnyOfArguments} configuration option. Here, the interpretation of "arguments" is rather
- * loose. Not only arguments specified on via CLI (such as plugin mojos, profiles and properties) are checked but
- * also their counterparts defined in pom.xml files.
+ * loose. Not only arguments specified on via CLI (such as plugin mojos, profiles and properties) are checked but also
+ * their counterparts defined in pom.xml files.
  *
  * @author <a href="https://github.com/ppalaga">Peter Palaga</a>
  */
@@ -57,51 +56,28 @@ public class SrcdepsEnforcer implements ProjectExecutionListener {
 
     private static final Logger log = LoggerFactory.getLogger(SrcdepsEnforcer.class);
 
-    private static void assertNotSrcdeps(List<Dependency> deps, String foundFailWithTrigger)
+    private static void assertNotSrcdeps(List<Dependency> deps, String[] violation)
             throws LifecycleExecutionException {
         for (Dependency dep : deps) {
-            assertNotSrcdeps(dep.getGroupId(), dep.getArtifactId(), dep.getVersion(), foundFailWithTrigger);
+            assertNotSrcdeps(dep.getGroupId(), dep.getArtifactId(), dep.getVersion(), violation);
         }
     }
 
-    private static void assertNotSrcdeps(String group, String artifact, String version, String foundFailWithTrigger)
+    private static void assertNotSrcdeps(String group, String artifact, String version, String[] violation)
             throws LifecycleExecutionException {
         if (SrcVersion.isSrcVersion(version)) {
-            throw new LifecycleExecutionException(
-                    String.format("This build was configured to fail if there is a source dependency [%s:%s:%s] and %s",
-                            group, artifact, version, foundFailWithTrigger));
+            throw new LifecycleExecutionException(String.format(
+                    "This build was configured to fail if there is a source dependency [%s:%s:%s] and %s [%s]", group,
+                    artifact, version, violation[0], violation[1]));
         }
     }
 
-    private final Set<String> failWithMojos;
-
-    private final Set<String> failWithProfiles;
-    private final Set<String> failWithProperties;
+    private final ConfigurationProducer configurationProducer;
 
     @Inject
     public SrcdepsEnforcer(ConfigurationProducer configurationProducer) {
         super();
-        Set<String> failWithArgs = configurationProducer.getMergedFailWithAnyOfArguments();
-
-        Set<String> failWithMojos = new LinkedHashSet<>();
-        Set<String> failWithProfiles = new LinkedHashSet<>();
-        Set<String> failWithProperties = new LinkedHashSet<>();
-
-        for (String failWithArg : failWithArgs) {
-            if (failWithArg.startsWith("-P")) {
-                final String profile = failWithArg.substring(2);
-                failWithProfiles.add(profile);
-            } else if (failWithArg.startsWith("-D")) {
-                final String keyVal = failWithArg.substring(2);
-                failWithProperties.add(keyVal);
-            } else {
-                failWithMojos.add(failWithArg);
-            }
-        }
-
-        this.failWithMojos = Collections.unmodifiableSet(failWithMojos);
-        this.failWithProfiles = Collections.unmodifiableSet(failWithProfiles);
-        this.failWithProperties = Collections.unmodifiableSet(failWithProperties);
+        this.configurationProducer = configurationProducer;
     }
 
     @Override
@@ -120,7 +96,7 @@ public class SrcdepsEnforcer implements ProjectExecutionListener {
     public void beforeProjectLifecycleExecution(ProjectExecutionEvent event) throws LifecycleExecutionException {
         final MavenProject project = event.getProject();
         log.info("srcdeps enforcer checks for violations in {}:{}", project.getGroupId(), project.getArtifactId());
-        String firstViolation = findFirstViolation(event.getExecutionPlan(), project.getActiveProfiles(),
+        String[] firstViolation = findFirstViolation(event.getExecutionPlan(), project.getActiveProfiles(),
                 project.getProperties());
         if (firstViolation != null) {
             /* check if there are srcdeps */
@@ -148,37 +124,42 @@ public class SrcdepsEnforcer implements ProjectExecutionListener {
      * @param properties
      * @return the failure triggering argument as a {@link String}
      */
-    private String findFirstViolation(List<MojoExecution> mojoExecutions, List<Profile> profiles,
+    private String[] findFirstViolation(List<MojoExecution> mojoExecutions, List<Profile> profiles,
             Properties properties) {
-        String firstViolation = null;
+        final MavenFailWith failWith = configurationProducer.getConfiguration().getMaven().getFailWith();
+        log.debug("Srcdeps Enforcer using failWith {}", failWith);
+        final Set<String> failWithGoals = failWith.getGoals();
+        String[] firstViolation = null;
         for (MojoExecution mojoExecution : mojoExecutions) {
             MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
             final String fullGoalName = mojoDescriptor.getFullGoalName();
-            if (failWithMojos.contains(fullGoalName)) {
-                firstViolation = fullGoalName;
+            if (failWithGoals.contains(fullGoalName)) {
+                firstViolation = new String[] {"goal", fullGoalName};
                 break;
             } else {
                 final String goal = mojoDescriptor.getGoal();
                 PluginDescriptor pluginDescriptor = mojoDescriptor.getPluginDescriptor();
                 final String fqMojo = pluginDescriptor.getGroupId() + ":" + pluginDescriptor.getArtifactId() + ":"
                         + goal;
-                if (failWithMojos.contains(fqMojo)) {
-                    firstViolation = fqMojo;
+                if (failWithGoals.contains(fqMojo)) {
+                    firstViolation = new String[] {"goal", fqMojo};
                     break;
                 }
             }
         }
 
         if (firstViolation == null) {
+            final Set<String> failWithProfiles = failWith.getProfiles();
             for (Profile profile : profiles) {
                 final String id = profile.getId();
                 if (failWithProfiles.contains(id)) {
-                    firstViolation = "-P" + id;
+                    firstViolation = new String[] {"profile", id};
                 }
             }
         }
 
         if (firstViolation == null) {
+            final Set<String> failWithProperties = failWith.getProperties();
             Properties sysProps = System.getProperties();
             for (String keyVal : failWithProperties) {
                 final int eqPos = keyVal.indexOf('=');
@@ -188,13 +169,13 @@ public class SrcdepsEnforcer implements ProjectExecutionListener {
                     key = keyVal.substring(0, eqPos);
                     val = keyVal.substring(eqPos + 1);
                     if (val.equals(properties.get(key)) || val.equals(sysProps.get(key))) {
-                        firstViolation = "-D" + keyVal;
+                        firstViolation = new String[] {"property", keyVal};
                         break;
                     }
                 } else {
                     key = keyVal;
                     if (properties.containsKey(key) || sysProps.containsKey(key)) {
-                        firstViolation = "-D" + keyVal;
+                        firstViolation = new String[] {"property", keyVal};
                         break;
                     }
                 }

@@ -87,7 +87,7 @@
          around https://github.com/apache/maven/blob/master/pom.xml#L61 -->
     <version.org.eclipse.sisu>0.3.2</version.org.eclipse.sisu>
     <version.org.slf4j>1.7.5</version.org.slf4j>
-    <version.org.srcdeps.core>2.1.0</version.org.srcdeps.core>
+    <version.org.srcdeps.core>3.0.0</version.org.srcdeps.core>
 
     <!--
       Maven plugin versions

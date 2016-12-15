@@ -16,23 +16,9 @@
  */
 package org.srcdeps.mvn;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 public interface Constants {
 
     /** See the bin/mvn or bin/mvn.cmd script of your maven distro, where maven.multiModuleProjectDirectory is set */
     String MAVEN_MULTI_MODULE_PROJECT_DIRECTORY_PROPERTY = "maven.multiModuleProjectDirectory";
-
-
-    /** A system property for setting an encoding other than the default {@code utf-8} for reading the
-     * {@code .mvn/srcdeps.yaml} file. */
-    String SRCDEPS_ENCODING_PROPERTY = "srcdeps.encoding";
-
-    Set<String> DEFAULT_FAIL_WITH_ANY_OF_ARGUMENTS = Collections
-            .unmodifiableSet(new LinkedHashSet<>(Arrays.asList("release:prepare", "release:perform")));
-
 
 }
