@@ -26,11 +26,11 @@
   <extension>
     <groupId>org.srcdeps.mvn</groupId>
     <artifactId>srcdeps-maven-local-repository</artifactId>
-    <version>2.1.0</version><!-- @srcdeps.version@ -->
+    <version>3.0.0</version><!-- @srcdeps.version@ -->
   </extension>
   <extension>
     <groupId>org.srcdeps.mvn</groupId>
     <artifactId>srcdeps-maven-enforcer</artifactId>
-    <version>2.1.0</version><!-- @srcdeps.version@ -->
+    <version>3.0.0</version><!-- @srcdeps.version@ -->
   </extension>
 </extensions>

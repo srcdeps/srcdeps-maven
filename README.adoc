@@ -42,12 +42,12 @@ are built and installed while they are looked up.
   <extension>
     <groupId>org.l2x6.maven.srcdeps</groupId>
     <artifactId>srcdeps-maven-local-repository</artifactId>
-    <version>2.1.0</version><!-- @srcdeps.version@ -->
+    <version>3.0.0</version><!-- @srcdeps.version@ -->
   </extension>
   <extension>
     <groupId>org.srcdeps.mvn</groupId>
     <artifactId>srcdeps-maven-enforcer</artifactId><!-- to prevent srcdeps in releases -->
-    <version>2.1.0</version><!-- @srcdeps.version@ -->
+    <version>3.0.0</version><!-- @srcdeps.version@ -->
   </extension>
 </extensions>
 ----
