@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2016 Maven Source Dependencies
+ * Copyright 2015-2017 Maven Source Dependencies
  * Plugin contributors as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import org.srcdeps.config.yaml.YamlConfigurationIo;
 import org.srcdeps.core.config.Configuration;
 import org.srcdeps.core.config.ConfigurationException;
+import org.srcdeps.core.config.ScmRepositoryFinder;
 import org.srcdeps.core.config.tree.walk.DefaultsAndInheritanceVisitor;
 import org.srcdeps.core.config.tree.walk.OverrideVisitor;
 import org.srcdeps.mvn.Constants;
@@ -41,6 +42,7 @@ public class ConfigurationProducer {
     public static final Path relativeMvnSrcdepsYaml = Paths.get(".mvn", "srcdeps.yaml");
     private final Configuration configuration;
     private final Path configurationLocation;
+    private final ScmRepositoryFinder repositoryFinder;
 
     public ConfigurationProducer() {
         super();
@@ -67,6 +69,8 @@ public class ConfigurationProducer {
                     .accept(new OverrideVisitor(System.getProperties())) //
                     .accept(new DefaultsAndInheritanceVisitor()) //
                     .build();
+
+            this.repositoryFinder = new ScmRepositoryFinder(this.configuration);
         } catch (IOException | ConfigurationException e) {
             throw new RuntimeException(e);
         }
@@ -78,5 +82,9 @@ public class ConfigurationProducer {
 
     public Path getConfigurationLocation() {
         return configurationLocation;
+    }
+
+    public ScmRepositoryFinder getRepositoryFinder() {
+        return repositoryFinder;
     }
 }
