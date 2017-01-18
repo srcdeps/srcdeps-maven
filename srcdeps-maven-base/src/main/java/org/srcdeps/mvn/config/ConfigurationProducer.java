@@ -54,26 +54,31 @@ public class ConfigurationProducer {
         }
         final Path basePath = Paths.get(basePathString).toAbsolutePath();
         final Path srcdepsYamlPath = basePath.resolve(relativeMvnSrcdepsYaml);
+        this.configurationLocation = srcdepsYamlPath;
+
+        final Configuration.Builder configBuilder;
         if (Files.exists(srcdepsYamlPath)) {
-            this.configurationLocation = srcdepsYamlPath;
             log.debug("SrcdepsLocalRepositoryManager using configuration {}", configurationLocation);
+            final String encoding = System.getProperty(Configuration.getSrcdepsEncodingProperty(), "utf-8");
+            final Charset cs = Charset.forName(encoding);
+            try (Reader r = Files.newBufferedReader(configurationLocation, cs)) {
+                configBuilder = new YamlConfigurationIo().read(r);
+            } catch (IOException | ConfigurationException e) {
+                throw new RuntimeException(e);
+            }
         } else {
-            throw new RuntimeException(
-                    String.format("Could not locate srcdeps configuration at [%s]", srcdepsYamlPath));
+            log.warn("Could not locate srcdeps configuration at {}, defaulting to an empty configuration",
+                    srcdepsYamlPath);
+            configBuilder = Configuration.builder();
         }
 
-        final String encoding = System.getProperty(Configuration.getSrcdepsEncodingProperty(), "utf-8");
-        final Charset cs = Charset.forName(encoding);
-        try (Reader r = Files.newBufferedReader(configurationLocation, cs)) {
-            this.configuration = new YamlConfigurationIo().read(r) //
-                    .accept(new OverrideVisitor(System.getProperties())) //
-                    .accept(new DefaultsAndInheritanceVisitor()) //
-                    .build();
+        this.configuration = configBuilder //
+                .accept(new OverrideVisitor(System.getProperties())) //
+                .accept(new DefaultsAndInheritanceVisitor()) //
+                .build();
 
-            this.repositoryFinder = new ScmRepositoryFinder(this.configuration);
-        } catch (IOException | ConfigurationException e) {
-            throw new RuntimeException(e);
-        }
+        this.repositoryFinder = new ScmRepositoryFinder(this.configuration);
+
     }
 
     public Configuration getConfiguration() {

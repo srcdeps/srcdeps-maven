@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-    Copyright 2015-2016 Maven Source Dependencies
+    Copyright 2015-2017 Maven Source Dependencies
     Plugin contributors as indicated by the @author tags.
 
     Licensed under the Apache License, Version 2.0 (the "License");
@@ -52,6 +52,7 @@
   </developers>
 
   <modules>
+    <module>srcdeps-maven-plugin</module>
     <module>srcdeps-maven-base</module>
     <module>srcdeps-maven-local-repository</module>
     <module>srcdeps-maven-enforcer</module>
@@ -86,6 +87,7 @@
     <version.io.takari.maven.plugins>2.9.0</version.io.takari.maven.plugins>
     <version.junit>4.12</version.junit>
     <version.org.apache.maven>3.3.9</version.org.apache.maven>
+    <version.org.apache.maven.plugin-tools>3.5</version.org.apache.maven.plugin-tools>
     <!-- keep in sync with aetherVersion in maven
          around https://github.com/apache/maven/blob/master/pom.xml#L67 -->
     <version.org.eclipse.aether>1.0.2.v20150114</version.org.eclipse.aether>
@@ -93,6 +95,7 @@
          around https://github.com/apache/maven/blob/master/pom.xml#L61 -->
     <version.org.eclipse.sisu>0.3.2</version.org.eclipse.sisu>
     <version.org.slf4j>1.7.5</version.org.slf4j>
+    <version.xerces>2.11.0</version.xerces>
 
     <!--
       Maven plugin versions
@@ -143,8 +146,20 @@
 
       <dependency>
         <groupId>org.apache.maven</groupId>
+        <artifactId>maven-model-builder</artifactId>
+        <version>${version.org.apache.maven}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.maven</groupId>
         <artifactId>maven-plugin-api</artifactId>
         <version>${version.org.apache.maven}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.maven.plugin-tools</groupId>
+        <artifactId>maven-plugin-annotations</artifactId>
+        <version>${version.org.apache.maven.plugin-tools}</version>
       </dependency>
 
       <dependency>
@@ -182,6 +197,12 @@
         <groupId>org.srcdeps.mvn</groupId>
         <artifactId>srcdeps-maven-quickstarts</artifactId>
         <version>3.0.1-SNAPSHOT</version>
+      </dependency>
+
+      <dependency>
+        <groupId>xerces</groupId>
+        <artifactId>xercesImpl</artifactId>
+        <version>${version.xerces}</version>
       </dependency>
 
     </dependencies>
@@ -232,6 +253,19 @@
       </plugin>
 
       <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-release-plugin</artifactId>
+        <configuration>
+          <tagNameFormat>@{project.version}</tagNameFormat>
+          <preparationGoals>clean generate-sources -Psync-project-versions-release -Psync-project-versions "-Dsrcdeps.version.commit.message.prefix=[maven-release-plugin] Prepare release"</preparationGoals>
+          <completionGoals>clean generate-sources -Psync-project-versions-snapshot -Psync-project-versions "-Dsrcdeps.version.commit.message.prefix=[maven-release-plugin] Set next development version"</completionGoals>
+          <goals>deploy</goals>
+          <releaseProfiles>release</releaseProfiles>
+          <autoVersionSubmodules>true</autoVersionSubmodules>
+        </configuration>
+      </plugin>
+
+      <plugin>
         <groupId>org.commonjava.maven.plugins</groupId>
         <artifactId>directory-maven-plugin</artifactId>
         <executions>
@@ -244,5 +278,91 @@
 
     </plugins>
   </build>
+
+  <profiles>
+
+    <profile>
+      <id>sync-project-versions-release</id>
+      <properties>
+        <!-- Comma separated list of source files where we need to update the version literals marked by @srcdeps.version@ -->
+        <srcdeps.version.files>doc/srcdeps-maven-configuration.adoc,srcdeps-maven-quickstarts/**/.mvn/extensions.xml,srcdeps-maven-base/src/main/java/org/srcdeps/mvn/Constants.java</srcdeps.version.files>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>sync-project-versions-snapshot</id>
+      <properties>
+        <!-- Comma separated list of source files where we need to update the version literals marked by @srcdeps.version@ -->
+        <srcdeps.version.files>srcdeps-maven-base/src/main/java/org/srcdeps/mvn/Constants.java</srcdeps.version.files>
+      </properties>
+    </profile>
+
+    <profile>
+      <id>sync-project-versions</id>
+      <build>
+        <plugins>
+
+          <plugin>
+            <groupId>com.google.code.maven-replacer-plugin</groupId>
+            <artifactId>replacer</artifactId>
+            <inherited>false</inherited>
+            <executions>
+              <execution>
+                <id>replace-release-version</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>replace</goal>
+                </goals>
+                <configuration>
+                  <basedir>${basedir}</basedir>
+                  <filesToInclude>${srcdeps.version.files}</filesToInclude>
+                  <replacements>
+                    <replacement>
+                      <token>&lt;version&gt;[^&lt;]*&lt;/version&gt;&lt;!-- @srcdeps.version@ --&gt;</token>
+                      <value>&lt;version&gt;${project.version}&lt;/version&gt;&lt;!-- @srcdeps.version@ --&gt;</value>
+                    </replacement>
+                    <replacement>
+                      <token>SRCDEPS_MAVEN_VERSION = "[^"]*"; // @srcdeps.version@</token>
+                      <value>SRCDEPS_MAVEN_VERSION = "${project.version}"; // @srcdeps.version@</value>
+                    </replacement>
+                  </replacements>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-scm-plugin</artifactId>
+            <inherited>false</inherited>
+            <executions>
+              <execution>
+                <id>add-changed-files-to-scm</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>add</goal>
+                </goals>
+                <configuration>
+                  <basedir>${basedir}</basedir>
+                  <includes>${srcdeps.version.files}</includes>
+                </configuration>
+              </execution>
+              <execution>
+                <id>commit-changed-files-to-scm</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>checkin</goal>
+                </goals>
+                <configuration>
+                  <message>${srcdeps.version.commit.message.prefix} ${project.version}</message>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+  </profiles>
 
 </project>
