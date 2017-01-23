@@ -1,0 +1,58 @@
+= Srcdeps for Maven Configuration Guide
+
+The behavior of srcdeps is controlled through two configuration files:
+
+<<extensions-xml>> - make Maven aware of srcdeps +
+<<srcdeps-yaml>> - the main srcdeps configuration file
+
+Note that both files can be initialized by running our `srcdeps-maven-plugin`'s `init` mojo the in the root
+directory of your project tree:
+
+[source,shell]
+----
+mvn org.srcdeps.mvn:srcdeps-maven-plugin:init
+----
+
+[[extensions-xml]]
+== 1. `.mvn/extensions.xml`
+
+`srcdeps-maven-local-repository` needs to be declared as a Maven Core Extension in `.mvn/extensions.xml` of the maven project.
+
+[source,xml]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<extensions>
+  <extension>
+    <groupId>org.l2x6.maven.srcdeps</groupId>
+    <artifactId>srcdeps-maven-local-repository</artifactId>
+    <version>3.0.0</version><!-- @srcdeps.version@ -->
+  </extension>
+  <extension>
+    <groupId>org.srcdeps.mvn</groupId>
+    <artifactId>srcdeps-maven-enforcer</artifactId><!-- to prevent srcdeps in releases -->
+    <version>3.0.0</version><!-- @srcdeps.version@ -->
+  </extension>
+</extensions>
+----
+
+[[srcdeps-yaml]]
+== 2. `.mvn/srcdeps.yaml`
+
+A few settings have to be configured in `.mvn/srcdeps.yaml` file. Especially, the mapping from groupId's of
+dependencies to SCM repositories where their sources reside. This is a minimal `.mvn/srcdeps.yaml` file. Please
+refer to link:https://github.com/srcdeps/srcdeps-core/tree/master/doc/srcdeps.yaml[srcdeps.yaml reference] for full
+reference.
+
+[source,yaml]
+----
+configModelVersion: 1.1
+repositories:
+  org.my-group:
+    selectors:
+    - org.my-group:*:*  # if one of the selectors matches the groupId of a -SRC- dependency,
+                        # then the following urls will be used to build that dependency
+    urls:
+    - https://github.com/my-org/my-project.git  # If you list multiple SCM repos here then only
+                                                # the first successful checkout will count
+
+----

@@ -29,49 +29,26 @@ if the requested artifact contains `-SRC-` in its version string. For such ones,
 called, to build what is necessary and install it to the Maven local repository. In other words, the dependencies
 are built and installed while they are looked up.
 
-=== How to configure for Maven:
+=== How to configure for Maven
 
-==== 1. `.mvn/extensions.xml`
+[quote, Unknown]
+____
+Every project needs an initializer, right?
+____
 
-`srcdeps-maven-local-repository` needs to be declared as a Maven Core Extension in `.mvn/extensions.xml` of the maven project.
+We provide a maven plugin that initializes srcdeps configuration files `.mvn/extensions.xml` and `.mvn/srcdeps.yaml`. Just run the following in the root directory of your project tree:
 
-[source,xml]
+[source,shell]
 ----
-<?xml version="1.0" encoding="UTF-8"?>
-<extensions>
-  <extension>
-    <groupId>org.l2x6.maven.srcdeps</groupId>
-    <artifactId>srcdeps-maven-local-repository</artifactId>
-    <version>3.0.0</version><!-- @srcdeps.version@ -->
-  </extension>
-  <extension>
-    <groupId>org.srcdeps.mvn</groupId>
-    <artifactId>srcdeps-maven-enforcer</artifactId><!-- to prevent srcdeps in releases -->
-    <version>3.0.0</version><!-- @srcdeps.version@ -->
-  </extension>
-</extensions>
+mvn org.srcdeps.mvn:srcdeps-maven-plugin:init
 ----
 
-==== 2. `.mvn/srcdeps.yaml`
+While the resulting `.mvn/extensions.xml` will mostly be ready to use, the usefulness of the generated
+`.mvn/srcdeps.yaml` file depends strongly on the completeness of your dependencies' pom files. You should review
+the generated `.mvn/srcdeps.yaml` and adjust it manually.
 
-A few settings have to be configured in `.mvn/srcdeps.yaml` file. Especially, the mapping from groupId's of
-dependencies to SCM repositiries where their sources reside. This is a minimal `.mvn/srcdeps.yaml` file. Please
-refer to link:https://github.com/srcdeps/srcdeps-core/tree/master/doc/srcdeps.yaml[srcdeps.yaml reference] for full
-reference.
-
-[source,yaml]
-----
-configModelVersion: 1.1
-repositories:
-  org.my-group:
-    selectors:
-    - org.my-group:*:*  # if one of the selectors matches the groupId of a -SRC- dependency,
-                        # then the following urls will be used to build that dependency
-    urls:
-    - https://github.com/my-org/my-project.git  # If you list multiple SCM repos here then only
-                                                # the first successful checkout will count
-
-----
+See link:doc/srcdeps-maven-configuration.adoc[Srcdeps for Maven Configuration Guide] for more details about
+`.mvn/extensions.xml` and `.mvn/srcdeps.yaml`.
 
 
 === Override `.mvn/srcdeps.yaml` options on the command line

@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2016 Maven Source Dependencies
+ * Copyright 2015-2017 Maven Source Dependencies
  * Plugin contributors as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,5 +20,7 @@ public interface Constants {
 
     /** See the bin/mvn or bin/mvn.cmd script of your maven distro, where maven.multiModuleProjectDirectory is set */
     String MAVEN_MULTI_MODULE_PROJECT_DIRECTORY_PROPERTY = "maven.multiModuleProjectDirectory";
+
+    String SRCDEPS_MAVEN_VERSION = "3.0.1-SNAPSHOT"; // @srcdeps.version@
 
 }

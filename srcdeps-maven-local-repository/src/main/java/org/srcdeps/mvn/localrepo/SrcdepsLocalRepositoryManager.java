@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2016 Maven Source Dependencies
+ * Copyright 2015-2017 Maven Source Dependencies
  * Plugin contributors as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -138,7 +138,8 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
             final Configuration configuration = configurationProducer.getConfiguration();
 
             if (!configuration.isSkip()) {
-                ScmRepository scmRepo = findScmRepo(configuration.getRepositories(), artifact);
+                ScmRepository scmRepo = configurationProducer.getRepositoryFinder()
+                        .findRepository(artifact.getGroupId(), artifact.getArtifactId(), version);
                 SrcVersion srcVersion = SrcVersion.parse(version);
                 try (PathLock projectBuildDir = buildDirectoriesManager.openBuildDirectory(scmRepo.getIdAsPath(),
                         srcVersion)) {
