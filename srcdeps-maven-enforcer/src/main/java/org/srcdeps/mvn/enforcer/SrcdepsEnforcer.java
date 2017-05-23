@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2016 Maven Source Dependencies
+ * Copyright 2015-2017 Maven Source Dependencies
  * Plugin contributors as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,10 @@
  */
 package org.srcdeps.mvn.enforcer;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
 
@@ -33,20 +36,18 @@ import org.apache.maven.model.DependencyManagement;
 import org.apache.maven.model.Profile;
 import org.apache.maven.plugin.MojoExecution;
 import org.apache.maven.plugin.descriptor.MojoDescriptor;
-import org.apache.maven.plugin.descriptor.PluginDescriptor;
 import org.apache.maven.project.MavenProject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srcdeps.core.SrcVersion;
-import org.srcdeps.core.config.MavenFailWith;
+import org.srcdeps.core.config.Maven;
+import org.srcdeps.core.config.MavenAssertions;
 import org.srcdeps.mvn.config.ConfigurationProducer;
 
 /**
- * A {@link ProjectExecutionListener} that implements the {@code failWithAnyOfArguments} srcdeps configuration option.
- * {@link SrcdepsEnforcer} checks the setup of the given Maven project and a given Maven execution request for arguments
- * present in {@code failWithAnyOfArguments} configuration option. Here, the interpretation of "arguments" is rather
- * loose. Not only arguments specified on via CLI (such as plugin mojos, profiles and properties) are checked but also
- * their counterparts defined in pom.xml files.
+ * A {@link ProjectExecutionListener} that implements the {@code failWith} and {@code failWithout} srcdeps configuration
+ * options. {@link SrcdepsEnforcer} checks the setup of the given Maven project and a given Maven execution request for
+ * arguments present in {@code failWith} and {@code failWithout} configuration options.
  *
  * @author <a href="https://github.com/ppalaga">Peter Palaga</a>
  */
@@ -56,8 +57,105 @@ public class SrcdepsEnforcer implements ProjectExecutionListener {
 
     private static final Logger log = LoggerFactory.getLogger(SrcdepsEnforcer.class);
 
-    private static void assertNotSrcdeps(List<Dependency> deps, String[] violation)
-            throws LifecycleExecutionException {
+    /**
+     * Checks for failure triggering conditions in the given {@code goals}, {@code profiles} and {@code properties}.
+     *
+     * @param failWith
+     *            the srcdeps configuration node
+     * @param goals
+     *            the goals of the current Maven invocation
+     * @param profiles
+     *            the profiles active in the current Maven invocation
+     * @param properties
+     *            the properties present the current Maven invocation
+     * @return the failure triggering item
+     */
+    static String[] assertFailWith(MavenAssertions failWith, List<String> goals, List<String> profiles,
+            Properties properties) {
+
+        log.debug("Srcdeps Enforcer using failWith {}", failWith);
+        final Set<String> failWithGoals = failWith.getGoals();
+        for (String goal : goals) {
+            if (failWithGoals.contains(goal)) {
+                return new String[] { "goal", goal };
+            }
+        }
+
+        final Set<String> failWithProfiles = failWith.getProfiles();
+        for (String profile : profiles) {
+            if (failWithProfiles.contains(profile)) {
+                return new String[] { "profile", profile };
+            }
+        }
+
+        final Set<String> failWithProperties = failWith.getProperties();
+        for (String keyVal : failWithProperties) {
+            final int eqPos = keyVal.indexOf('=');
+            final String key;
+            final String val;
+            if (eqPos >= 0) {
+                key = keyVal.substring(0, eqPos);
+                val = keyVal.substring(eqPos + 1);
+                if (val.equals(properties.get(key))) {
+                    return new String[] { "property", keyVal };
+                }
+            } else {
+                key = keyVal;
+                if (properties.containsKey(key)) {
+                    return new String[] { "property", keyVal };
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Checks for failure triggering conditions in the given {@code goals}, {@code profiles} and {@code properties}.
+     *
+     * @param failWithout
+     *            the srcdeps configuration node
+     * @param goals
+     *            the goals of the current Maven invocation
+     * @param profiles
+     *            the profiles active in the current Maven invocation
+     * @param properties
+     *            the properties present the current Maven invocation
+     * @return the failure triggering item
+     */
+    static String[] assertFailWithout(MavenAssertions failWithout, List<String> goals, List<String> profiles,
+            Properties properties) {
+
+        log.debug("Srcdeps Enforcer using failWithout {}", failWithout);
+        final Set<String> failWithoutGoals = new LinkedHashSet<>(failWithout.getGoals());
+        failWithoutGoals.removeAll(goals);
+        if (!failWithoutGoals.isEmpty()) {
+            return new String[] { "goals missing", failWithoutGoals.toString() };
+        }
+
+        final Set<String> failWithoutProfiles = new LinkedHashSet<>(failWithout.getProfiles());
+        failWithoutProfiles.removeAll(profiles);
+        if (!failWithoutProfiles.isEmpty()) {
+            return new String[] { "profiles missing", failWithoutProfiles.toString() };
+        }
+
+        final Set<String> failWithoutProperties = new LinkedHashSet<>(failWithout.getProperties());
+        for (Entry<Object, Object> prop : properties.entrySet()) {
+            final String key = prop.getKey().toString();
+            failWithoutProperties.remove(key);
+            final Object val = prop.getValue();
+            if (val != null) {
+                failWithoutProperties.remove(key + "=" + val.toString());
+            }
+        }
+        if (!failWithoutProperties.isEmpty()) {
+            return new String[] { "properties missing", failWithoutProperties.toString() };
+        }
+
+        return null;
+    }
+
+    private static void assertNotSrcdeps(List<Dependency> deps, String[] violation) throws LifecycleExecutionException {
         for (Dependency dep : deps) {
             assertNotSrcdeps(dep.getGroupId(), dep.getArtifactId(), dep.getVersion(), violation);
         }
@@ -96,8 +194,32 @@ public class SrcdepsEnforcer implements ProjectExecutionListener {
     public void beforeProjectLifecycleExecution(ProjectExecutionEvent event) throws LifecycleExecutionException {
         final MavenProject project = event.getProject();
         log.info("srcdeps enforcer checks for violations in {}:{}", project.getGroupId(), project.getArtifactId());
-        String[] firstViolation = findFirstViolation(event.getExecutionPlan(), project.getActiveProfiles(),
-                project.getProperties());
+
+        final Maven maven = configurationProducer.getConfiguration().getMaven();
+
+        final List<MojoExecution> mojoExecutions = event.getExecutionPlan();
+        final List<String> goals = new ArrayList<>(mojoExecutions.size());
+        for (MojoExecution mojoExecution : mojoExecutions) {
+            MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
+            goals.add(mojoDescriptor.getFullGoalName());
+            goals.add(mojoDescriptor.getGoal());
+        }
+
+        final List<String> profiles = new ArrayList<>();
+        final List<Profile> activeProfiles = project.getActiveProfiles();
+        for (Profile profile : activeProfiles) {
+            final String id = profile.getId();
+            profiles.add(id);
+        }
+
+        final Properties props = new Properties();
+        props.putAll(project.getProperties());
+        props.putAll(System.getProperties());
+
+        String[] firstViolation = assertFailWithout(maven.getFailWithout(), goals, profiles, props);
+        if (firstViolation == null) {
+            firstViolation = assertFailWith(maven.getFailWith(), goals, profiles, props);
+        }
         if (firstViolation != null) {
             /* check if there are srcdeps */
             Artifact parent = project.getParentArtifact();
@@ -113,77 +235,6 @@ public class SrcdepsEnforcer implements ProjectExecutionListener {
                 assertNotSrcdeps(deps, firstViolation);
             }
         }
-    }
-
-    /**
-     * Goes through the given {@code mojoExecutions}, {@code profiles} and {@code properties} to find some failure
-     * triggering argument in them.
-     *
-     * @param mojoExecutions
-     * @param profiles
-     * @param properties
-     * @return the failure triggering argument as a {@link String}
-     */
-    private String[] findFirstViolation(List<MojoExecution> mojoExecutions, List<Profile> profiles,
-            Properties properties) {
-        final MavenFailWith failWith = configurationProducer.getConfiguration().getMaven().getFailWith();
-        log.debug("Srcdeps Enforcer using failWith {}", failWith);
-        final Set<String> failWithGoals = failWith.getGoals();
-        String[] firstViolation = null;
-        for (MojoExecution mojoExecution : mojoExecutions) {
-            MojoDescriptor mojoDescriptor = mojoExecution.getMojoDescriptor();
-            final String fullGoalName = mojoDescriptor.getFullGoalName();
-            if (failWithGoals.contains(fullGoalName)) {
-                firstViolation = new String[] {"goal", fullGoalName};
-                break;
-            } else {
-                final String goal = mojoDescriptor.getGoal();
-                PluginDescriptor pluginDescriptor = mojoDescriptor.getPluginDescriptor();
-                final String fqMojo = pluginDescriptor.getGroupId() + ":" + pluginDescriptor.getArtifactId() + ":"
-                        + goal;
-                if (failWithGoals.contains(fqMojo)) {
-                    firstViolation = new String[] {"goal", fqMojo};
-                    break;
-                }
-            }
-        }
-
-        if (firstViolation == null) {
-            final Set<String> failWithProfiles = failWith.getProfiles();
-            for (Profile profile : profiles) {
-                final String id = profile.getId();
-                if (failWithProfiles.contains(id)) {
-                    firstViolation = new String[] {"profile", id};
-                }
-            }
-        }
-
-        if (firstViolation == null) {
-            final Set<String> failWithProperties = failWith.getProperties();
-            Properties sysProps = System.getProperties();
-            for (String keyVal : failWithProperties) {
-                final int eqPos = keyVal.indexOf('=');
-                final String key;
-                final String val;
-                if (eqPos >= 0) {
-                    key = keyVal.substring(0, eqPos);
-                    val = keyVal.substring(eqPos + 1);
-                    if (val.equals(properties.get(key)) || val.equals(sysProps.get(key))) {
-                        firstViolation = new String[] {"property", keyVal};
-                        break;
-                    }
-                } else {
-                    key = keyVal;
-                    if (properties.containsKey(key) || sysProps.containsKey(key)) {
-                        firstViolation = new String[] {"property", keyVal};
-                        break;
-                    }
-                }
-            }
-        }
-
-        return firstViolation;
-
     }
 
 }
