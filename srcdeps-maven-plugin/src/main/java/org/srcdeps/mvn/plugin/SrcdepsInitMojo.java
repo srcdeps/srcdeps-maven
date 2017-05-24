@@ -71,8 +71,8 @@ import org.srcdeps.core.config.tree.walk.DefaultsAndInheritanceVisitor;
 import org.srcdeps.core.config.tree.walk.OverrideVisitor;
 
 /**
- * First calls {@link SrcdepsUpgradeMojo} and then generates the {@code .mvn/srcdeps.yaml} file. Any existing
- * {@code .mvn/srcdeps.yaml} is overwritten without warning.
+ * First calls {@link SrcdepsUpgradeMojo} and then generates the {@code srcdeps.yaml} file. Any existing
+ * {@code srcdeps.yaml} file is overwritten without warning.
  * <p>
  * The main responsibility of {@link SrcdepsInitMojo} is to produce a {@code srcdeps.yaml} file that is as complete as
  * possible. To accomplish this, the mojo crawls through the dependencies of the current project tree and collects the
@@ -672,7 +672,7 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
 
             Configuration.Builder config = Configuration.builder() //
                     .configModelVersion(Configuration.getLatestConfigModelVersion()).commentBefore("") //
-                    .commentBefore(".mvn/srcdeps.yaml - the srcdeps configuration file") //
+                    .commentBefore("srcdeps.yaml - the srcdeps configuration file") //
                     .commentBefore("") //
                     .commentBefore(
                             "The full srcdeps.yaml reference can be found under https://github.com/srcdeps/srcdeps-core/tree/master/doc/srcdeps.yaml") //
@@ -759,9 +759,8 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
                     .accept(new DefaultsAndInheritanceVisitor()) //
             ;
 
-            final Path srcdepsYamlPath = mvnDir.resolve("srcdeps.yaml");
+            final Path srcdepsYamlPath = multiModuleRootDir.toPath().resolve("srcdeps.yaml");
             try {
-                Files.createDirectories(mvnDir);
                 YamlWriterConfiguration yamlWriterConfiguration = YamlWriterConfiguration.builder().build();
                 try (Writer out = Files.newBufferedWriter(srcdepsYamlPath, Charset.forName(encoding))) {
                     config.accept(new YamlWriterVisitor(out, yamlWriterConfiguration));

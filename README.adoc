@@ -36,7 +36,7 @@ ____
 Every project needs an initializer, right?
 ____
 
-We provide a maven plugin that initializes srcdeps configuration files `.mvn/extensions.xml` and `.mvn/srcdeps.yaml`. Just run the following in the root directory of your project tree:
+We provide a maven plugin that initializes srcdeps configuration files `.mvn/extensions.xml` and `srcdeps.yaml`. Just run the following in the root directory of your project tree:
 
 [source,shell]
 ----
@@ -44,17 +44,17 @@ mvn org.srcdeps.mvn:srcdeps-maven-plugin:init
 ----
 
 While the resulting `.mvn/extensions.xml` will mostly be ready to use, the usefulness of the generated
-`.mvn/srcdeps.yaml` file depends strongly on the completeness of your dependencies' pom files. You should review
-the generated `.mvn/srcdeps.yaml` and adjust it manually.
+`srcdeps.yaml` file depends strongly on the completeness of your dependencies' pom files. You should review
+the generated `srcdeps.yaml` and adjust it manually.
 
 See link:doc/srcdeps-maven-configuration.adoc[Srcdeps for Maven Configuration Guide] for more details about
-`.mvn/extensions.xml` and `.mvn/srcdeps.yaml`.
+`.mvn/extensions.xml` and `srcdeps.yaml`.
 
 
-=== Override `.mvn/srcdeps.yaml` options on the command line
+=== Override `srcdeps.yaml` options on the command line
 
-All options configurable in `.mvn/srcdeps.yaml` can be overriden through system properties passed on the command
-line. To construct the property name, just take the `srcdeps.` prefix and append the `.mvn/srcdeps.yaml` DOM
+All options configurable in `srcdeps.yaml` can be overriden through system properties passed on the command
+line. To construct the property name, just take the `srcdeps.` prefix and append the `srcdeps.yaml` DOM
 path to the option you want to override.
 
 For example, to dynamically change the verbosity you would have to issue something like
@@ -105,7 +105,7 @@ demonstrates how a project can depend on a source revision of another project.
 
 * Srcdeps tools are supposed to build dependencies with versions matching `{whatever}-SRC-{srcVersionType}-{srcVersion}`
 * Any artifact having such a `-SRC-` version that is requested during the build needs to have an associated SCM
-  repository in the configuration. For Maven, the configuration is stored in `.mvn/srcdeps.yaml` under the top level
+  repository in the configuration. For Maven, the configuration is stored in `srcdeps.yaml` under the top level
   directory of the project.
 * The URL of the associated SCM repository is used to fetch the sources of the dependency and checkout the desired revision.
   For Maven the sources are cloned to `${maven.repo.local}/../srcdeps/${scmRepo.id}`

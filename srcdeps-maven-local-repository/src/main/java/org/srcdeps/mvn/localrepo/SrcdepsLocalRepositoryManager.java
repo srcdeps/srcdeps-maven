@@ -218,7 +218,7 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
             }
         }
         throw new IllegalStateException(
-                String.format("No srcdeps SCM repository configured in .mvn/srcdeps.yaml for groupId [%s]", groupId));
+                String.format("No srcdeps SCM repository configured in srcdeps.yaml for groupId [%s]", groupId));
     }
 
     @Override
