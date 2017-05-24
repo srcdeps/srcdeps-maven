@@ -68,7 +68,7 @@ public class SrcdepsInitMojoTest {
     private static final Path mvnLocalRepo;
     private static final String projectVersion = System.getProperty("project.version");
     private static final String SRCDEPS_YAML_EXPECTED = "#\n" + //
-            "# .mvn/srcdeps.yaml - the srcdeps configuration file\n" + //
+            "# srcdeps.yaml - the srcdeps configuration file\n" + //
             "#\n" + //
             "# The full srcdeps.yaml reference can be found under https://github.com/srcdeps/srcdeps-core/tree/master/doc/srcdeps.yaml\n"
             + //
@@ -77,7 +77,7 @@ public class SrcdepsInitMojoTest {
             "#\n" + //
             "#     mvn org.srcdeps.mvn:srcdeps-maven-plugin:init\n" + //
             "#\n" + //
-            "configModelVersion: 2.0\n" + //
+            "configModelVersion: 2.1\n" + //
             "repositories:\n" + //
             "  org.srcdeps.core:\n" + //
             "    selectors:\n" + //
@@ -121,7 +121,7 @@ public class SrcdepsInitMojoTest {
 
         Assert.assertEquals(projectVersion, srcdepsVersion);
 
-        final File srcdepsYamlPath = new File(projDir, ".mvn/srcdeps.yaml");
+        final File srcdepsYamlPath = new File(projDir, "srcdeps.yaml");
         Assert.assertFalse(
                 String.format("The file [%s] must not exist before the test", srcdepsYamlPath.getAbsolutePath()),
                 srcdepsYamlPath.exists());

@@ -36,12 +36,16 @@ mvn org.srcdeps.mvn:srcdeps-maven-plugin:init
 ----
 
 [[srcdeps-yaml]]
-== 2. `.mvn/srcdeps.yaml`
+== 2. `srcdeps.yaml`
 
-A few settings have to be configured in `.mvn/srcdeps.yaml` file. Especially, the mapping from groupId's of
-dependencies to SCM repositories where their sources reside. This is a minimal `.mvn/srcdeps.yaml` file. Please
+A few settings have to be configured in `srcdeps.yaml` file. Especially, the mapping from groupId's of
+dependencies to SCM repositories where their sources reside. This is a minimal `srcdeps.yaml` file. Please
 refer to link:https://github.com/srcdeps/srcdeps-core/tree/master/doc/srcdeps.yaml[srcdeps.yaml reference] for full
 reference.
+
+The `srcdeps.yaml` file has to be located in the root directory of a Maven source tree. Before version 3.1.0 of
+`srcdeps-maven` the location was `.mvn/srcdeps.yaml` and it is still supported as a fall back location in case
+there is no `srcdeps-maven` in the root directory.
 
 [source,yaml]
 ----

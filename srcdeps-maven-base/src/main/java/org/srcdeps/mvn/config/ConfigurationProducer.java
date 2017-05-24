@@ -39,7 +39,12 @@ import org.srcdeps.mvn.Constants;
 public class ConfigurationProducer {
     private static final Logger log = LoggerFactory.getLogger(ConfigurationProducer.class);
 
-    public static final Path relativeMvnSrcdepsYaml = Paths.get(".mvn", "srcdeps.yaml");
+    /** Since 3.1.0 this is the default location of srcdeps.yaml file */
+    private static final Path SRCDEPS_YAML_PATH = Paths.get("srcdeps.yaml");
+
+    /** Before 3.1.0 this used to be the default location of srcdeps.yaml file */
+    private static final Path MVN_SRCDEPS_YAML_PATH = Paths.get(".mvn", "srcdeps.yaml");
+
     private final Configuration configuration;
     private final Path configurationLocation;
     private final ScmRepositoryFinder repositoryFinder;
@@ -53,7 +58,13 @@ public class ConfigurationProducer {
                     Constants.MAVEN_MULTI_MODULE_PROJECT_DIRECTORY_PROPERTY));
         }
         final Path basePath = Paths.get(basePathString).toAbsolutePath();
-        final Path srcdepsYamlPath = basePath.resolve(relativeMvnSrcdepsYaml);
+        final Path defaultSrcdepsYamlPath = basePath.resolve(SRCDEPS_YAML_PATH);
+        final Path legacySrcdepsYamlPath = basePath.resolve(MVN_SRCDEPS_YAML_PATH);
+        Path srcdepsYamlPath = defaultSrcdepsYamlPath;
+        if (!Files.exists(srcdepsYamlPath)) {
+            srcdepsYamlPath = legacySrcdepsYamlPath;
+        }
+
         this.configurationLocation = srcdepsYamlPath;
 
         final Configuration.Builder configBuilder;
@@ -67,8 +78,8 @@ public class ConfigurationProducer {
                 throw new RuntimeException(e);
             }
         } else {
-            log.warn("Could not locate srcdeps configuration at {}, defaulting to an empty configuration",
-                    srcdepsYamlPath);
+            log.warn("Could not locate srcdeps configuration at neither {} nor {}, defaulting to an empty configuration",
+                    defaultSrcdepsYamlPath, legacySrcdepsYamlPath);
             configBuilder = Configuration.builder();
         }
 

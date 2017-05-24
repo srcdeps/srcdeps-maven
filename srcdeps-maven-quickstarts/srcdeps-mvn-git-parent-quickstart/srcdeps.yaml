@@ -1,5 +1,5 @@
 #
-# Copyright 2015-2016 Maven Source Dependencies
+# Copyright 2015-2017 Maven Source Dependencies
 # Plugin contributors as indicated by the @author tags.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-# `.mvn/srcdeps.yaml` - the srcdeps configuration file
+# `srcdeps.yaml` - the srcdeps configuration file
 
 # Note that this is a minimal srcdeps.yaml file that constains only options relevant for this quickstart.
 # The full srcdeps.yaml reference can be found under https://github.com/srcdeps/srcdeps-core/tree/master/doc/srcdeps.yaml
@@ -25,11 +25,6 @@
 #
 # Required, no default, only 1.0 supported at the moment
 configModelVersion: 2.0
-
-maven:
-  failWith:
-    properties:
-    - srcdeps-fail-property
 
 # `repositories` - a map of SCM repositories.
 #
