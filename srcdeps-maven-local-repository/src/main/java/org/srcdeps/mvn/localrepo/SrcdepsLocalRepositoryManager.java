@@ -76,15 +76,36 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
         return Collections.unmodifiableList(result);
     }
 
+    /**
+     * Finds the first {@link ScmRepository} associated with the given {@code groupId:artifactId:version} triple.
+     *
+     * @param repositories
+     * @param groupId
+     * @param artifactId
+     * @param version
+     * @return the matching {@link ScmRepository}
+     */
+    private static ScmRepository findScmRepo(List<ScmRepository> repositories, String groupId, String artifactId,
+            String version) {
+        for (ScmRepository scmRepository : repositories) {
+            if (scmRepository.getGavSet().contains(groupId, artifactId, version)) {
+                return scmRepository;
+            }
+        }
+        throw new IllegalStateException(
+                String.format("No srcdeps SCM repository configured in srcdeps.yaml for artifact [%s:%s:%s]", groupId,
+                        artifactId, version));
+    }
+
     private final BuildDirectoriesManager buildDirectoriesManager;
 
     private final BuildService buildService;
 
+    private final ConfigurationProducer configurationProducer;
+
     private final LocalRepositoryManager delegate;
 
     private final Path scrdepsDir;
-
-    private final ConfigurationProducer configurationProducer;
 
     public SrcdepsLocalRepositoryManager(LocalRepositoryManager delegate, BuildService buildService,
             PathLocker<SrcVersion> pathLocker, ConfigurationProducer configurationProducer) {
@@ -94,7 +115,6 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
         this.scrdepsDir = delegate.getRepository().getBasedir().toPath().getParent().resolve("srcdeps");
         this.buildDirectoriesManager = new BuildDirectoriesManager(scrdepsDir, pathLocker);
         this.configurationProducer = configurationProducer;
-
     }
 
     /**
@@ -138,8 +158,8 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
             final Configuration configuration = configurationProducer.getConfiguration();
 
             if (!configuration.isSkip()) {
-                ScmRepository scmRepo = configurationProducer.getRepositoryFinder()
-                        .findRepository(artifact.getGroupId(), artifact.getArtifactId(), version);
+                final ScmRepository scmRepo = findScmRepo(configuration.getRepositories(), artifact.getGroupId(), artifact.getArtifactId(),
+                        version);
                 SrcVersion srcVersion = SrcVersion.parse(version);
                 try (PathLock projectBuildDir = buildDirectoriesManager.openBuildDirectory(scmRepo.getIdAsPath(),
                         srcVersion)) {
@@ -162,6 +182,7 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                                 delegate.getRepository().getBasedir().getAbsolutePath());
 
                         BuildRequest buildRequest = BuildRequest.builder() //
+                                .dependentProjectRootDirectory(configurationProducer.getMultimoduleProjectRootDirectory()) //
                                 .projectRootDirectory(projectBuildDir.getPath()) //
                                 .scmUrls(scmRepo.getUrls()) //
                                 .srcVersion(srcVersion) //
@@ -173,7 +194,7 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                                 .verbosity(scmRepo.getVerbosity()) //
                                 .ioRedirects(ioRedirects) //
                                 .versionsMavenPluginVersion(scmRepo.getMaven().getVersionsMavenPluginVersion())
-                                .build();
+                                .gradleModelTransformer(scmRepo.getGradle().getModelTransformer()).build();
                         buildService.build(buildRequest);
 
                         /* check once again if the delegate sees the newly built artifact */
@@ -200,25 +221,6 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
     @Override
     public LocalMetadataResult find(RepositorySystemSession session, LocalMetadataRequest request) {
         return delegate.find(session, request);
-    }
-
-    /**
-     * Finds the first {@link ScmRepository} associated with the given {@code artifact}. The association is given by the
-     * exact string match between the groupId of the {@code artifact} and one of the {@link ScmRepository#getSelectors()
-     * selectors} of {@link ScmRepository}
-     *
-     * @param artifact
-     * @return
-     */
-    private static ScmRepository findScmRepo(List<ScmRepository> repositories, Artifact artifact) {
-        final String groupId = artifact.getGroupId();
-        for (ScmRepository scmRepository : repositories) {
-            if (scmRepository.getSelectors().contains(groupId)) {
-                return scmRepository;
-            }
-        }
-        throw new IllegalStateException(
-                String.format("No srcdeps SCM repository configured in srcdeps.yaml for groupId [%s]", groupId));
     }
 
     @Override

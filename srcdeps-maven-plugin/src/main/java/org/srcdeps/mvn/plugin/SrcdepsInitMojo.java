@@ -537,7 +537,7 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
             }
 
             for (String selector : selectors) {
-                repoBuilder.selector(selector);
+                repoBuilder.include(selector);
             }
 
             return repoBuilder.url(url);
@@ -747,7 +747,7 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
                         .commentBefore(
                                 "       and has added this dummy repository only as a starting point for you to proceed manually") //
                         .id("org.my-group") //
-                        .selector("org.my-group") //
+                        .include("org.my-group") //
                         .url("git:https://github.com/my-org/my-project.git") //
                 ;
                 repos.put(dummyRepo.getName(), dummyRepo);
