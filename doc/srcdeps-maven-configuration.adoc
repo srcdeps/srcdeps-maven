@@ -40,20 +40,20 @@ mvn org.srcdeps.mvn:srcdeps-maven-plugin:init
 
 A few settings have to be configured in `srcdeps.yaml` file. Especially, the mapping from groupId's of
 dependencies to SCM repositories where their sources reside. This is a minimal `srcdeps.yaml` file. Please
-refer to link:https://github.com/srcdeps/srcdeps-core/tree/master/doc/srcdeps.yaml[srcdeps.yaml reference] for full
-reference.
+refer to link:https://github.com/srcdeps/srcdeps-core/tree/master/doc/srcdeps.yaml[srcdeps.yaml reference] for more
+details.
 
 The `srcdeps.yaml` file has to be located in the root directory of a Maven source tree. Before version 3.1.0 of
 `srcdeps-maven` the location was `.mvn/srcdeps.yaml` and it is still supported as a fall back location in case
-there is no `srcdeps-maven` in the root directory.
+there is no `srcdeps.yaml` in the root directory.
 
 [source,yaml]
 ----
-configModelVersion: 1.1
+configModelVersion: 2.2
 repositories:
   org.my-group:
-    selectors:
-    - org.my-group:*:*  # if one of the selectors matches the groupId of a -SRC- dependency,
+    includes:
+    - org.my-group:*:*  # if one of the includes matches the groupId of a -SRC- dependency,
                         # then the following urls will be used to build that dependency
     urls:
     - https://github.com/my-org/my-project.git  # If you list multiple SCM repos here then only

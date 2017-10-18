@@ -10,8 +10,8 @@ A Maven project containing a dependency on a source revision of a Gradle project
 == Recommended study order
 
 * link:.mvn/extensions.xml[`.mvn/extensions.xml`]
-* link:srcdeps.yaml[`srcdeps.yaml`] and the
-  https://github.com/srcdeps/srcdeps-core/blob/master/doc/srcdeps.yaml[full `srcdeps.yaml` documentation]
+* link:srcdeps.yaml[`srcdeps.yaml`] and its documentation under link:../../../doc/srcdeps-maven-configuration.adoc and
+  https://github.com/srcdeps/srcdeps-core/blob/master/doc/srcdeps.yaml .
 * The version string in link:pom.xml#L46[`pom.xml`]
 * Issue `mvn clean install` on command line in the directory where this README file resides.
 * Check in the output of the above `mvn` command if the
@@ -26,4 +26,4 @@ A Maven project containing a dependency on a source revision of a Gradle project
 
 == Feedback
 
-via link:https://github.com/srcdeps/srcdeps/issues[Github Issues]
+via link:https://github.com/srcdeps/srcdeps-maven/issues[scrdeps-maven Github Issues]

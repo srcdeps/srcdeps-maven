@@ -77,12 +77,12 @@ repositories:
     # At least one include is required
     # Since 2.2
     #
-    # Note that `includes` has the same meaning as `selectors` that existed since 1.0. `selectors` is still kept as an
+    # Note that `includes` has the same meaning as `includes` that existed since 1.0. `includes` is still kept as an
     # alias for `includes`.
     #
-    # Note that in configModelVersion: 1.0, selectors consisted only of groupId literals to perform exact string match
+    # Note that in configModelVersion: 1.0, includes consisted only of groupId literals to perform exact string match
     # with the `groupId` of the dependency. Because the subpatterns for artifactId and version can be omitted since 1.1
-    # the 1.1 selectors are backward compatible with 1.0 selectors.
+    # the 1.1 includes are backward compatible with 1.0 includes.
     #
     includes:
     - org.srcdeps.test.gradle # This SCM repository entry will be used for building artifacts
