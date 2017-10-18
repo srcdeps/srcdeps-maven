@@ -1,0 +1,99 @@
+#
+# Copyright 2015-2017 Maven Source Dependencies
+# Plugin contributors as indicated by the @author tags.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# `srcdeps.yaml` - the srcdeps configuration file.
+#
+# The full srcdeps.yaml reference can be found under https://github.com/srcdeps/srcdeps-core/tree/master/doc/srcdeps.yaml
+#
+# Note that the options set here can be overriden on the command line,
+# see https://github.com/srcdeps/srcdeps-maven/blob/master/README.adoc#override-mvnsrcdepsyaml-options-on-the-command-line
+#
+# This file has to be located in the root directory of a Maven or
+# Gradle source tree. Before version 3.1.0 of `srcdeps-maven` the location for Maven was `.mvn/srcdeps.yaml` and it is
+# still supported.
+
+
+# `configModelVersion` exists to track the changes in the schema of of the srcdeps.yaml file.
+#
+# = configModelVersion compatibility matrix
+#
+#  srcdeps-core | srcdeps-maven | Compatible configModelVersions
+# --------------+---------------+--------------------------------
+#  2.0.0        | 2.0.0         | 1.0
+#  2.1.0        | 2.1.0         | 1.1, 1.0
+#  3.0.x        | 3.0.x         | 2.0
+#  3.1.x        | 3.1.x         | 2.1, 2.0
+#  3.2.x        | 3.2.x         | 2.2, 2.1, 2.0
+#
+# Required, no default
+# Since 1.0
+configModelVersion: 2.2
+
+# `repositories` - a map of source repositories to checkout and build from
+#
+# Required, no default
+# Since 1.0
+repositories:
+
+  # the `id` of the source repository, typically the `groupId` of its artifacts,
+  # or any other string unique at this level of the yaml file.
+  org.srcdeps.test.gradle:
+
+    # `includes` - select which dependency artifacts should be built from this source repository.
+    #
+    # An include is a pattern to match dependency GAVs (triples of groupId, artifactId and version) against. An include
+    # has three colon delimited subpatterns, one for each of groupId, artifactId and version. The subpatterns for
+    # artifactId and version can be omitted. The subpatterns may contain the wildcard * that stands for a number
+    # of characters or an empty string.
+    #
+    # = examples of includes:
+    #
+    # `org.my-group`             an equivalent of `org.my-group:*:*`. It will match any version of any artifact
+    #                            having groupId `org.my-group`.
+    #
+    # `org.my-group*`            an equivalent of `org.my-group*:*:*`. It will match any version of any artifact
+    #                            whose groupId starts with `org.my-group` - i.e. it will match all of `org.my-group`,
+    #                            `org.my-group.api`, `org.my-group.impl`, etc.
+    #
+    # `org.my-group:my-artifact` an equivalent of `org.my-group:my-artifact:*`. It will match any version of all such
+    #                            artifacts that have groupId `org.my-group` and artifactId `my-artifact`
+    #
+    # `org.my-group:my-artifact:1.2.3` will match just the version 1.2.3 of artifacts `org.my-group:my-artifact`.
+    #
+    # At least one include is required
+    # Since 2.2
+    #
+    # Note that `includes` has the same meaning as `selectors` that existed since 1.0. `selectors` is still kept as an
+    # alias for `includes`.
+    #
+    # Note that in configModelVersion: 1.0, selectors consisted only of groupId literals to perform exact string match
+    # with the `groupId` of the dependency. Because the subpatterns for artifactId and version can be omitted since 1.1
+    # the 1.1 selectors are backward compatible with 1.0 selectors.
+    #
+    includes:
+    - org.srcdeps.test.gradle # This SCM repository entry will be used for building artifacts
+                                   # with groupId org.srcdeps.test.gradle (unless the given artifact is excluded
+                                   # by `excludes`)
+
+    # `urls` - a list of URLs to checkout the sources of the given dependency. If you list multiple SCM
+    # repositories here then only the first successful checkout will count.
+    #
+    # At least one URL is required
+    # Since 1.0
+    urls:
+    - git:https://github.com/srcdeps/srcdeps-test-artifact-gradle.git
+

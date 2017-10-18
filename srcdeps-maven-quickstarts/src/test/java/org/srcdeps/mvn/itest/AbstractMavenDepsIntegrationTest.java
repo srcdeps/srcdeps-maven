@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.junit.Assert;
@@ -28,11 +30,15 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.srcdeps.core.Gavtc;
 import org.srcdeps.core.MavenLocalRepository;
 import org.srcdeps.core.config.Maven;
 import org.srcdeps.core.util.SrcdepsCoreUtils;
 
+import io.takari.aether.localrepo.TakariLocalRepositoryManagerFactory;
 import io.takari.maven.testing.TestResources;
+import io.takari.maven.testing.executor.MavenExecution;
+import io.takari.maven.testing.executor.MavenExecutionResult;
 import io.takari.maven.testing.executor.MavenRuntime;
 import io.takari.maven.testing.executor.MavenRuntime.MavenRuntimeBuilder;
 
@@ -43,7 +49,6 @@ public abstract class AbstractMavenDepsIntegrationTest {
     protected static final String mrmSettingsXmlPath = System.getProperty("mrm.settings.xml");
     protected static final MavenLocalRepository mvnLocalRepo;
     protected static final Path mvnLocalRepoPath;
-    protected static final String ORG_L2X6_MAVEN_SRCDEPS_ITEST_GROUPID = "org.l2x6.maven.srcdeps.itest";
     protected static final String projectVersion = System.getProperty("project.version");
     protected static final String QUICKSTART_GROUPID = "org.srcdeps.mvn.quickstarts";
     protected static final String QUICKSTART_VERSION = "1.0-SNAPSHOT";
@@ -119,5 +124,54 @@ public abstract class AbstractMavenDepsIntegrationTest {
 
     public AbstractMavenDepsIntegrationTest(MavenRuntimeBuilder runtimeBuilder) throws IOException, Exception {
         this.verifier = runtimeBuilder.withExtension(new File("target/classes").getCanonicalFile()).build();
+    }
+
+    protected MavenExecutionResult assertBuild(String project, String[] gavtcPatternsExpectedToExist,
+            String[] gavtcPatternsExpectedNotToExist, String... goals) throws Exception {
+
+        /* delete all expected and unexpected groups */
+        List<Path> expectedToExist = new ArrayList<>();
+        for (String gavtcPattern : gavtcPatternsExpectedToExist) {
+            for (Gavtc gavtc : Gavtc.ofPattern(gavtcPattern)) {
+                SrcdepsCoreUtils.deleteDirectory(mvnLocalRepo.resolveGroup(gavtc.getGroupId()));
+                expectedToExist.add(mvnLocalRepo.resolve(gavtc));
+            }
+        }
+        List<Path> expectedNotToExist = new ArrayList<>();
+        for (String gavtcPattern : gavtcPatternsExpectedNotToExist) {
+            for (Gavtc gavtc : Gavtc.ofPattern(gavtcPattern)) {
+                SrcdepsCoreUtils.deleteDirectory(mvnLocalRepo.resolveGroup(gavtc.getGroupId()));
+                expectedNotToExist.add(mvnLocalRepo.resolve(gavtc));
+            }
+        }
+
+        MavenExecutionResult result = build(project, goals);
+        result //
+                .assertErrorFreeLog() //
+                .assertLogText("SrcdepsLocalRepositoryManager will decorate "
+                        + TakariLocalRepositoryManagerFactory.class.getName()) //
+        ;
+
+        for (Path p : expectedToExist) {
+            assertExists(p);
+        }
+        for (Path p : expectedNotToExist) {
+            assertNotExists(p);
+        }
+
+        return result;
+    }
+
+    protected MavenExecutionResult build(String project, String... goals) throws Exception {
+        log.error("Building test project {}", project);
+
+        final String quickstartRepoDir = "org/l2x6/srcdeps/quickstarts/" + project;
+        SrcdepsCoreUtils.deleteDirectory(mvnLocalRepoPath.resolve(quickstartRepoDir));
+
+        MavenExecution execution = verifier.forProject(resources.getBasedir(project)) //
+                // .withCliOption("-X") //
+                .withCliOptions("-Dmaven.repo.local=" + mvnLocalRepo.getRootDirectory().toAbsolutePath().toString()) //
+                .withCliOption("-s").withCliOption(mrmSettingsXmlPath);
+        return execution.execute(goals);
     }
 }
