@@ -1,42 +1,47 @@
-= Srcdeps Maven
+= `srcdeps` for Maven
 
 ifdef::env-github[]
 [link=https://travis-ci.org/srcdeps/srcdeps-maven]
 image:https://travis-ci.org/srcdeps/srcdeps-maven.svg?branch=master["Build Status", link="https://travis-ci.org/srcdeps/srcdeps-maven"]
 endif::[]
 
-A Maven Core Extension for building dependencies from their sources during the build.
+A tool for building dependencies of a Maven project from their sources during the build of the dependent Maven project.
+
+A similar tool for building source dependencies of Gradle projects lives under https://github.com/srcdeps/srcdeps-gradle-plugin .
+Contributions to support Ant, sbt and other Java build tools are welcome!
 
 = What is this good for?
 
-Srcdeps alleviates some of the pains that arise from implementing Continuous Delivery in Maven projects. With srcdeps,
-a module can depend on a specific revision of another module. For instance, a module `web-banking-frontend` could
-depend on `account-balance-microservice` at git revision `abc123`, without requiring the
-`account-balance-microservice` to perform a complete Maven release.
+Source dependencies can help in situations, when the binaries of a dependency are not available in any remote
+Maven repository. It may happen for various reasons, such as:
 
+* The dependency project has not released yet because they release e.g. biweekly, but you want to develop and test your
+  project on top of their changes continuously - in the most extreme case, you want to integrate each of their commits.
+  This helps to find issues early and shorten your own delivery cycles.
+* The dependency project has not released for whatever other reasons (other priorities, project discontinued, ...)
+  but you still need to consume some commit from their branch.
+* The dependency project is doing nasty things and you do not want to consume their binaries. You want to fork their
+  source repository, cherry-pick only some of their commits and let srcdeps build out of your fork on the fly.
 
-== Srcdeps support for Maven
+Check this presentation find out more about source dependencies in Java: http://ppalaga.github.io/presentations/170508-jug-vienna/index.html
 
-Currently, the srcdeps toolkit supports only Maven 3.3.1+, although the
-link:https://github.com/srcdeps/srcdeps-core[Srcdeps Core]
-library has an ambition to be generic enough so that a support for other Java build tools such as Gradle or sbt can be
-added (contributions are welcome!).
+== `srcdeps` support for Maven
+
+You need to use Maven 3.3.1+ to build a Maven project that has source dependencies.
+As of `srcdeps-maven` version 3.2.0, a Maven project may depend not only on a source commit of another Maven project
+but also on a source commit of a Gradle project.
 
 The present solution for Maven is leveraging the concept of Maven Core Extensions introduced in Maven 3.3.1.
 In particular, we provide an implementation of `LocalRepositoryManager` that delegates all the usual artifact
 lookup work to the standard local repository manager available in Maven class path, but it is watching carefully,
 if the requested artifact contains `-SRC-` in its version string. For such ones, the `srcdeps-core` library is
-called, to build what is necessary and install it to the Maven local repository. In other words, the dependencies
+called, to build what is necessary and install it to the Maven Local Repository. In other words, the dependencies
 are built and installed while they are looked up.
 
-=== How to configure for Maven
+=== How to configure `srcdeps` for Maven
 
-[quote, Unknown]
-____
-Every project needs an initializer, right?
-____
-
-We provide a maven plugin that initializes srcdeps configuration files `.mvn/extensions.xml` and `srcdeps.yaml`. Just run the following in the root directory of your project tree:
+We provide a maven plugin that initializes srcdeps configuration files `.mvn/extensions.xml` and
+`srcdeps.yaml`. Just run the following in the root directory of your project tree:
 
 [source,shell]
 ----
@@ -50,87 +55,47 @@ the generated `srcdeps.yaml` and adjust it manually.
 See link:doc/srcdeps-maven-configuration.adoc[Srcdeps for Maven Configuration Guide] for more details about
 `.mvn/extensions.xml` and `srcdeps.yaml`.
 
-
-=== Override `srcdeps.yaml` options on the command line
-
-All options configurable in `srcdeps.yaml` can be overriden through system properties passed on the command
-line. To construct the property name, just take the `srcdeps.` prefix and append the `srcdeps.yaml` DOM
-path to the option you want to override.
-
-For example, to dynamically change the verbosity you would have to issue something like
-
-[source,shell]
-----
-mvn ... -Dsrcdeps.verbosity=debug
-----
-
-To *replace* `https://github.com/my-org/my-project.git` with your local git repository in the above
-example, you need to invoke something like
-
-[source,shell]
-----
-mvn ... -Dsrcdeps.repositories[org.my-group].urls[0]=/home/my-user/repos/my-project/.git
-----
-
-To *append* your local git repository to the list of URLs in the above example, you need to invoke something like
-
-[source,shell]
-----
-mvn ... -Dsrcdeps.repositories[org.my-group].urls[1]=/home/my-user/repos/my-project/.git
-----
-
-To *prepend* your local git repository to the list of URLs in the above example, you need to invoke something like
-
-[source,shell]
-----
-mvn ... -Dsrcdeps.repositories[org.my-group].urls[-1]=/home/my-user/repos/my-project/.git
-----
-
-To *replace the whole list* with a new list of URLs in the above example, you need to invoke something like
-
-[source,shell]
-----
-mvn ... -Dsrcdeps.repositories[org.my-group].urls=/home/my-user/repos/my-project/.git,https://github.com/my-user/my-project.git
-----
-
+Note that all options configurable in `srcdeps.yaml` can be overriden through system properties passed on the command
+line. See  https://github.com/srcdeps/srcdeps-core/tree/master/doc/srcdeps-yaml-runtime-overrides.adoc
 
 === Examples a.k.a. Quickstarts
 
 There is a couple of ready-to-build self-contained examples in the
-link:srcdeps-maven-quickstarts[srcdeps-maven-quickstarts] directory. Perhaps the most prominent of them is the
-link:srcdeps-maven-quickstarts/srcdeps-mvn-git-revision-quickstart[srcdeps-mvn-git-revision-quickstart] that
-demonstrates how a project can depend on a source revision of another project.
+link:srcdeps-maven-quickstarts[srcdeps-maven-quickstarts] directory. Perhaps the most prominent of them are
+
+* The link:srcdeps-maven-quickstarts/srcdeps-mvn-git-revision-quickstart[srcdeps-mvn-git-revision-quickstart] that
+demonstrates how a Maven project can depend on a source revision of another Maven project.
+* The link:srcdeps-maven-quickstarts/srcdeps-mvn-git-gradle-source-dependency-quickstart[srcdeps-mvn-git-gradle-source-dependency-quickstart]
+which shows a Maven project can depend on a source revision of a Gradle project.
+
 
 == How Srcdeps tools work
 
 * Srcdeps tools are supposed to build dependencies with versions matching `{whatever}-SRC-{srcVersionType}-{srcVersion}`
 * Any artifact having such a `-SRC-` version that is requested during the build needs to have an associated SCM
-  repository in the configuration. For Maven, the configuration is stored in `srcdeps.yaml` under the top level
-  directory of the project.
+  repository in the configuration. The configuration is stored in `srcdeps.yaml` under the top level
+  directory of the dependent project.
 * The URL of the associated SCM repository is used to fetch the sources of the dependency and checkout the desired revision.
-  For Maven the sources are cloned to `${maven.repo.local}/../srcdeps/${scmRepo.id}`
+  The sources are cloned to `${maven.repo.local}/../srcdeps/${scmRepo.id}`
 * Then, `srcdeps-core` changes the version in the sources to `{whatever}-SRC-{srcVersionType}-{srcVersion}`
-  using Versions Maven Plugin
+  using `versions-maven-plugin` in case the dependency is a Maven project, or a piece of gradle script injected
+  to `settings.gradle` if the dependency is a Gradle project.
 * And finally, `srcdeps-core` builds the artifacts and installs them to the local Maven repository
-* For Maven, the `-SRC-` dependencies are build only if they are not found in local repository - so they prolong the
-  build only when upgrading.
+* `-SRC-` dependencies are build only if they are not found in local repository - so they prolong the build only when
+  upgrading.
 
 
 == Misc.
 
 * All code and contributions are under link:/LICENSE.txt[Apache License]
 * Issues and Discussions: https://github.com/srcdeps/srcdeps-maven-plugin/issues
-* Slides link:http://ppalaga.github.io/presentations/160909-ci-cd-with-maven-and-srcdeps/160906-srcdeps.html[Continuous Integration/Delivery with Maven and srcdeps] 2016-09-09
-
 
 === Legacy note
 
-Originally, the present project provided a Maven plugin called `srcdeps-maven-plugin` that worked fairly well in most situations, but it turned out soon that the Maven Plugin API is not rich enough to allow for catching dependencies of
-all possible kinds. Most notably, the given project's parent pom and imports in `dependencyManagement` sections were
-resolved by Maven even before the plugin was initialized. Thus, if the given project's parent pom had a `-SRC-`
-version, the build failed with a missing artifact error message, simply because it happened before
-`srcdeps-maven-plugin` could do anything.
-
-An outdated presentation about the abandoned `srcdeps-maven-plugin`: http://ppalaga.github.io/presentations/150929-srcdeps-maven-plugin/150929-srcdeps-maven-plugin.html
-
-
+Originally, the present project provided a Maven plugin called `srcdeps-maven-plugin` that worked fairly well in
+most situations, but it turned out soon that the Maven Plugin API is not rich enough to allow for catching dependencies
+of all possible kinds. Most notably, the given project's parent pom and imports in `dependencyManagement`
+sections were resolved by Maven even before the plugin was initialized. Thus, if the given project's parent pom had a
+`-SRC-` version, the build failed with a missing artifact error message, simply because it happened before
+`srcdeps-maven-plugin` could do anything. That's why we later chose the much more powerful Maven Core Extensions
+API to implement `srcdeps` for Maven.

@@ -1,0 +1,29 @@
+= srcdeps-mvn-git-gradle-source-dependency-quickstart
+
+A Maven project containing a dependency on a source revision of a Gradle project
+
+== System requirements
+
+* Maven 3.3.1 or newer
+* Java 7 or newer
+
+== Recommended study order
+
+* link:.mvn/extensions.xml[`.mvn/extensions.xml`]
+* link:srcdeps.yaml[`srcdeps.yaml`] and its documentation under link:../../../doc/srcdeps-maven-configuration.adoc and
+  https://github.com/srcdeps/srcdeps-core/blob/master/doc/srcdeps.yaml .
+* The version string in link:pom.xml#L46[`pom.xml`]
+* Issue `mvn clean install` on command line in the directory where this README file resides.
+* Check in the output of the above `mvn` command if the
+  link:jar/src/test/java/org/srcdeps/quickstarts/mvn/git/revision/gradle/GreetingAppTest.java#L27[GreetingAppTest]
+  passed
+* Check if the version `1.0-SRC-revision-e63539236a94e8f6c2d720f8bda0323d1ce4db0f` of
+  `org.srcdeps.test.gradle:srcdeps-test-artifact-gradle-impl` was installed in your local Maven
+  repository.
+* Check the directory where the `srcdeps-test-artifact` was built:
+  `${maven.repo.local}/../srcdeps/org/srcdeps/test/gradle` - i.e. typically
+  `~/.m2/srcdeps/org/srcdeps/test/gradle`
+
+== Feedback
+
+via link:https://github.com/srcdeps/srcdeps-maven/issues[scrdeps-maven Github Issues]

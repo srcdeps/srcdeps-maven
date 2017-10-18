@@ -77,10 +77,10 @@ public class SrcdepsInitMojoTest {
             "#\n" + //
             "#     mvn org.srcdeps.mvn:srcdeps-maven-plugin:init\n" + //
             "#\n" + //
-            "configModelVersion: 2.1\n" + //
+            "configModelVersion: 2.2\n" + //
             "repositories:\n" + //
             "  org.srcdeps.core:\n" + //
-            "    selectors:\n" + //
+            "    includes:\n" + //
             "    - org.srcdeps.core\n" + //
             "    urls:\n" + //
             "    - git:git@github.com:srcdeps/srcdeps-core.git\n";

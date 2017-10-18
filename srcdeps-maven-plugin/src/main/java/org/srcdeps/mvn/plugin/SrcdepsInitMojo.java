@@ -82,10 +82,10 @@ import org.srcdeps.core.config.tree.walk.OverrideVisitor;
  * <li>Associations between GAVs and SCM URLs - i.e. which GAV should be built from which SCM URL
  * </ul>
  * That is basically enough on the level of raw data, but to produce a nice {@code srcdeps.yaml} file, we need a bit
- * more: It is often not optimal to list per-artifactId selectors [1] like
+ * more: It is often not optimal to list per-artifactId includes [1] like
  *
  * <pre>
- * selectors:
+ * includes:
  * - org.mygroup:my-artifact-1
  * - org.mygroup:my-artifact-2
  * - org.mygroup:my-artifact-3
@@ -94,17 +94,17 @@ import org.srcdeps.core.config.tree.walk.OverrideVisitor;
  *
  * That would be correct, but not nice and reliable because org.mygroup project may decide to add my-artifact-5 at some
  * point in the future. If all artifacts for the given URL, have the same groupId, then we could theoretically
- * generalize the selectors to just
+ * generalize the includes to just
  *
  * <pre>
- * selectors:
+ * includes:
  * - org.mygroup
  * </pre>
  *
  * But to do that, we need to make sure that the same group does not occur under other URLs. If it does, we fall back to
- * per-artifactId selectors.
+ * per-artifactId includes.
  * <p>
- * We also need a unique id for each SCM repository element in srcdeps.yaml file. Similarly as with selectors, we prefer
+ * We also need a unique id for each SCM repository element in srcdeps.yaml file. Similarly as with includes, we prefer
  * short groupId based IDs, as long as we can prove them to be unique over all SCM repositories.
  * <p>
  * To handle this two kinds of problems, we use a couple of tracking maps in {@link ScmRepositoryIndex}.
@@ -448,7 +448,7 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
         }
 
         /**
-         * Creates a new {@link ScmRepository.Builder} and sets its selectors, SCM URL and ID based on the information
+         * Creates a new {@link ScmRepository.Builder} and sets its includes, SCM URL and ID based on the information
          * available in this {@link ScmRepositoryIndex}.
          *
          * @param url
@@ -512,8 +512,8 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
 
             }
 
-            /* (2) add the selectors to the SCM repo */
-            Set<String> selectors = new TreeSet<>();
+            /* (2) add the includes to the SCM repo */
+            Set<String> includes = new TreeSet<>();
             Map<String, Set<String>> gaMap = urlGaMap.get(url);
 
             for (Entry<String, Set<String>> gaEntry : gaMap.entrySet()) {
@@ -524,20 +524,20 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
                      * good luck: this group ID does not occur under any other URL, hence the groupId is unique enough
                      * to serve as a generalized selector
                      */
-                    selectors.add(groupId);
+                    includes.add(groupId);
                 } else {
                     /*
-                     * this group ID occurs under some other URL. Therefore, we have to add per-artifactId selectors
+                     * this group ID occurs under some other URL. Therefore, we have to add per-artifactId includes
                      */
                     final Set<String> artifactIds = gaEntry.getValue();
                     for (String artifactId : artifactIds) {
-                        selectors.add(groupId + ":" + artifactId);
+                        includes.add(groupId + ":" + artifactId);
                     }
                 }
             }
 
-            for (String selector : selectors) {
-                repoBuilder.selector(selector);
+            for (String selector : includes) {
+                repoBuilder.include(selector);
             }
 
             return repoBuilder.url(url);
@@ -554,10 +554,10 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
                 final Builder oldBuilder = repos.get(id);
                 if (oldBuilder != null) {
                     log.warn(
-                            "SCM repository ID not unique, will force the uniqueness of the ID: [{}], old URLs: [{}] old selectors; new URLs: [{}], new selectors: [{}]",
+                            "SCM repository ID not unique, will force the uniqueness of the ID: [{}], old URLs: [{}] old includes; new URLs: [{}], new includes: [{}]",
                             id, //
-                            oldBuilder.getChildren().get("urls"), oldBuilder.getChildren().get("selectors"),
-                            newBuilder.getChildren().get("urls"), newBuilder.getChildren().get("selectors"));
+                            oldBuilder.getChildren().get("urls"), oldBuilder.getChildren().get("includes"),
+                            newBuilder.getChildren().get("urls"), newBuilder.getChildren().get("includes"));
                     newBuilder.id(id + ".id" + Math.abs(url.hashCode()));
                 }
                 repos.put(newBuilder.getName(), newBuilder);
@@ -747,7 +747,7 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
                         .commentBefore(
                                 "       and has added this dummy repository only as a starting point for you to proceed manually") //
                         .id("org.my-group") //
-                        .selector("org.my-group") //
+                        .include("org.my-group") //
                         .url("git:https://github.com/my-org/my-project.git") //
                 ;
                 repos.put(dummyRepo.getName(), dummyRepo);

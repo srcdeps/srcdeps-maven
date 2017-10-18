@@ -23,7 +23,7 @@
   <parent>
     <groupId>org.srcdeps.core</groupId>
     <artifactId>srcdeps-core-parent</artifactId>
-    <version>3.1.0</version>
+    <version>3.2.0</version>
   </parent>
 
   <groupId>org.srcdeps.mvn</groupId>
@@ -84,7 +84,7 @@
 
     <!-- dependencies -->
     <version.io.takari.aether.takari-local-repository>0.11.2</version.io.takari.aether.takari-local-repository>
-    <version.io.takari.maven.plugins>2.9.0</version.io.takari.maven.plugins>
+    <version.io.takari.maven.plugins>2.9.2</version.io.takari.maven.plugins>
     <version.junit>4.12</version.junit>
     <version.org.apache.maven>3.3.9</version.org.apache.maven>
     <version.org.apache.maven.plugin-tools>3.5</version.org.apache.maven.plugin-tools>

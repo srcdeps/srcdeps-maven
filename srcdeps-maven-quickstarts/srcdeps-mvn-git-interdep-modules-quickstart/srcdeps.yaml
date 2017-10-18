@@ -15,10 +15,10 @@
 # limitations under the License.
 #
 
-configModelVersion: 2.0
+configModelVersion: 2.2
 repositories:
   org.l2x6.maven.srcdeps.itest:
-    selectors:
+    includes:
     - org.l2x6.maven.srcdeps.itest
     urls:
     - git:https://github.com/srcdeps/srcdeps-test-artifact.git

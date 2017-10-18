@@ -21,11 +21,11 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.l2x6.srcdeps.quickstarts.srcdeps-mvn-git-revision-quickstart</groupId>
+  <groupId>org.srcdeps.mvn.quickstarts.srcdeps-mvn-git-revision-quickstart</groupId>
   <artifactId>srcdeps-mvn-git-revision-quickstart</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <description>A project containing a dependency on a source revision of another project</description>
+  <description>A Maven project containing a dependency on a source revision of another Maven project</description>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

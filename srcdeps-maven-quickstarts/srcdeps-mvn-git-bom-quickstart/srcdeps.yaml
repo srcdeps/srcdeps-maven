@@ -24,7 +24,7 @@
 # `configModelVersion` exists just in case we'll have to change the schema of srcdeps.yaml in the future.
 #
 # Required, no default, only 1.0 supported at the moment
-configModelVersion: 2.0
+configModelVersion: 2.2
 
 maven:
   failWith:
@@ -40,12 +40,12 @@ repositories:
   # or any other string unique at this level of the yaml file.
   org.l2x6.maven.srcdeps.itest:
 
-    # `selectors` - a way how to map dependency artifacts to source repositories.
+    # `includes` - a way how to map dependency artifacts to source repositories.
     # At the moment, the association is given by the exact string match between the `groupId` of the dependency
-    # artifact and one of the selectors listed here.
+    # artifact and one of the includes listed here.
     #
     # At least one selector is required
-    selectors:
+    includes:
     - org.l2x6.maven.srcdeps.itest # This SCM repository entry will be used for building artifacts
                                    # with groupId org.l2x6.maven.srcdeps.itest
 
