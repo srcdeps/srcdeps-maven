@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2016 Maven Source Dependencies
+ * Copyright 2015-2018 Maven Source Dependencies
  * Plugin contributors as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,7 +18,7 @@ package org.srcdeps.quickstarts.mvn.git.branch;
 
 import org.l2x6.maven.srcdeps.itest.App;
 
-public class AppClient {
+public class AppClientImpl {
     private final App app = new App();
 
     public App getApp() {

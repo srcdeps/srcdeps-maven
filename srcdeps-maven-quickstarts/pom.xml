@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-    Copyright 2015-2017 Maven Source Dependencies
+    Copyright 2015-2018 Maven Source Dependencies
     Plugin contributors as indicated by the @author tags.
 
     Licensed under the Apache License, Version 2.0 (the "License");
@@ -90,6 +90,12 @@
       <groupId>org.eclipse.aether</groupId>
       <artifactId>aether-impl</artifactId>
       <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.eclipse.jgit</groupId>
+      <artifactId>org.eclipse.jgit</artifactId>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
