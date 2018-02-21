@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2017 Maven Source Dependencies
+ * Copyright 2015-2018 Maven Source Dependencies
  * Plugin contributors as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,7 +38,6 @@ import org.srcdeps.core.util.SrcdepsCoreUtils;
 import io.takari.aether.localrepo.TakariLocalRepositoryManagerFactory;
 import io.takari.maven.testing.TestResources;
 import io.takari.maven.testing.executor.MavenExecution;
-import io.takari.maven.testing.executor.MavenExecutionResult;
 import io.takari.maven.testing.executor.MavenRuntime;
 import io.takari.maven.testing.executor.MavenRuntime.MavenRuntimeBuilder;
 
@@ -126,43 +125,70 @@ public abstract class AbstractMavenDepsIntegrationTest {
         this.verifier = runtimeBuilder.withExtension(new File("target/classes").getCanonicalFile()).build();
     }
 
-    protected MavenExecutionResult assertBuild(String project, String[] gavtcPatternsExpectedToExist,
+    protected static class LocalMavenRepoVerifier {
+        private final String project;
+        private final List<Gavtc> expectedToExist;
+        private final List<Gavtc> expectedNotToExist;
+
+        protected LocalMavenRepoVerifier(String project, String[] gavtcPatternsExpectedToExist) {
+            this(project, gavtcPatternsExpectedToExist, new String[0]);
+        }
+        protected LocalMavenRepoVerifier(String project, String[] gavtcPatternsExpectedToExist,
+                String[] gavtcPatternsExpectedNotToExist) {
+            this.project = project;
+            /* delete all expected and unexpected groups */
+            this.expectedToExist = new ArrayList<>();
+            for (String gavtcPattern : gavtcPatternsExpectedToExist) {
+                for (Gavtc gavtc : Gavtc.ofPattern(gavtcPattern)) {
+                    expectedToExist.add(gavtc);
+                }
+            }
+            this.expectedNotToExist = new ArrayList<>();
+            for (String gavtcPattern : gavtcPatternsExpectedNotToExist) {
+                for (Gavtc gavtc : Gavtc.ofPattern(gavtcPattern)) {
+                    expectedNotToExist.add(gavtc);
+                }
+            }
+        }
+        public void clean() throws IOException {
+            for (Gavtc gavtc : expectedToExist) {
+                SrcdepsCoreUtils.deleteDirectory(mvnLocalRepo.resolveGroup(gavtc.getGroupId()));
+            }
+            for (Gavtc gavtc : expectedNotToExist) {
+                SrcdepsCoreUtils.deleteDirectory(mvnLocalRepo.resolveGroup(gavtc.getGroupId()));
+            }
+        }
+
+        public void verify() {
+            for (Gavtc gavtc : expectedToExist) {
+                assertExists(mvnLocalRepo.resolve(gavtc));
+            }
+            for (Gavtc gavtc : expectedNotToExist) {
+                assertNotExists(mvnLocalRepo.resolve(gavtc));
+            }
+        }
+    }
+
+
+    protected WrappedMavenExecutionResult assertBuild(String project, String[] gavtcPatternsExpectedToExist,
             String[] gavtcPatternsExpectedNotToExist, String... goals) throws Exception {
 
-        /* delete all expected and unexpected groups */
-        List<Path> expectedToExist = new ArrayList<>();
-        for (String gavtcPattern : gavtcPatternsExpectedToExist) {
-            for (Gavtc gavtc : Gavtc.ofPattern(gavtcPattern)) {
-                SrcdepsCoreUtils.deleteDirectory(mvnLocalRepo.resolveGroup(gavtc.getGroupId()));
-                expectedToExist.add(mvnLocalRepo.resolve(gavtc));
-            }
-        }
-        List<Path> expectedNotToExist = new ArrayList<>();
-        for (String gavtcPattern : gavtcPatternsExpectedNotToExist) {
-            for (Gavtc gavtc : Gavtc.ofPattern(gavtcPattern)) {
-                SrcdepsCoreUtils.deleteDirectory(mvnLocalRepo.resolveGroup(gavtc.getGroupId()));
-                expectedNotToExist.add(mvnLocalRepo.resolve(gavtc));
-            }
-        }
+        LocalMavenRepoVerifier repoVerifier = new LocalMavenRepoVerifier(project, gavtcPatternsExpectedToExist, gavtcPatternsExpectedNotToExist);
+        repoVerifier.clean();
 
-        MavenExecutionResult result = build(project, goals);
+        WrappedMavenExecutionResult result = build(project, goals);
         result //
                 .assertErrorFreeLog() //
                 .assertLogText("SrcdepsLocalRepositoryManager will decorate "
                         + TakariLocalRepositoryManagerFactory.class.getName()) //
         ;
 
-        for (Path p : expectedToExist) {
-            assertExists(p);
-        }
-        for (Path p : expectedNotToExist) {
-            assertNotExists(p);
-        }
+        repoVerifier.verify();
 
         return result;
     }
 
-    protected MavenExecutionResult build(String project, String... goals) throws Exception {
+    protected WrappedMavenExecutionResult build(String project, String... goals) throws Exception {
         log.error("Building test project {}", project);
 
         final String quickstartRepoDir = "org/l2x6/srcdeps/quickstarts/" + project;
@@ -170,8 +196,9 @@ public abstract class AbstractMavenDepsIntegrationTest {
 
         MavenExecution execution = verifier.forProject(resources.getBasedir(project)) //
                 // .withCliOption("-X") //
+                .withCliOption("-B") // batch
                 .withCliOptions("-Dmaven.repo.local=" + mvnLocalRepo.getRootDirectory().toAbsolutePath().toString()) //
                 .withCliOption("-s").withCliOption(mrmSettingsXmlPath);
-        return execution.execute(goals);
+        return new WrappedMavenExecutionResult(execution.execute(goals));
     }
 }

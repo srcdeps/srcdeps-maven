@@ -16,15 +16,8 @@
  */
 package org.srcdeps.quickstarts.mvn.git.branch;
 
-import org.junit.Assert;
-import org.junit.Test;
-import org.srcdeps.quickstarts.mvn.git.branch.AppClientImpl;
+import org.l2x6.maven.srcdeps.itest.App;
 
-public class AppClientTest {
-
-    @Test
-    public void test() {
-        Assert.assertEquals("Superior Morning World!", new AppClientImpl().getApp().getMessage());
-    }
-
+public interface AppClient {
+    App getApp();
 }

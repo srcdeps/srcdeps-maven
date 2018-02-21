@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2016 Maven Source Dependencies
+ * Copyright 2015-2018 Maven Source Dependencies
  * Plugin contributors as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,6 +31,7 @@ import org.eclipse.aether.spi.localrepo.LocalRepositoryManagerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srcdeps.core.BuildService;
+import org.srcdeps.core.ScmService;
 import org.srcdeps.core.SrcVersion;
 import org.srcdeps.core.fs.PathLocker;
 import org.srcdeps.mvn.config.ConfigurationProducer;
@@ -59,6 +60,9 @@ public class SrcdepsRepositoryManagerFactory implements LocalRepositoryManagerFa
     /** Passed to {@link SrcdepsLocalRepositoryManager} */
     @Inject
     private BuildService buildService;
+    @Inject
+    private ConfigurationProducer configurationProducer;
+
     /** See {@link #lookupDelegate()} */
     @Inject
     private Provider<Map<String, LocalRepositoryManagerFactory>> factories;
@@ -67,37 +71,18 @@ public class SrcdepsRepositoryManagerFactory implements LocalRepositoryManagerFa
     @Inject
     private PathLocker<SrcVersion> pathLocker;
 
-    @Inject
-    private ConfigurationProducer configurationProducer;
-
     private final String preferedDelegateFactoryName;
 
     private final float priority;
+
+    @Inject
+    private ScmService scmService;
 
     public SrcdepsRepositoryManagerFactory() {
         this.priority = Float.parseFloat(
                 System.getProperty(SRCDEPS_REPOMANAGER_PRIORITY, String.valueOf(DEFAULT_SRCDEPS_REPOMANAGER_PRIORITY)));
         this.preferedDelegateFactoryName = System.getProperty(SRCDEPS_REPOMANAGER_DELAGATE_FACTORY,
                 DEFAULT_SRCDEPS_REPOMANAGER_DELAGATE_FACTORY);
-    }
-
-    /**
-     * Looks up the delegate using {@link #lookupDelegate()}, calls
-     * {@link SrcdepsRepositoryManagerFactory#newInstance(RepositorySystemSession, LocalRepository)} on the delegate
-     * producing a delegate {@link LocalRepositoryManager} that is passed to
-     * {@link SrcdepsLocalRepositoryManager#SrcdepsLocalRepositoryManager(LocalRepositoryManager, Provider, BuildService)}.
-     * The new {@link SrcdepsLocalRepositoryManager} instance is then returned.
-     *
-     * @see org.eclipse.aether.spi.localrepo.LocalRepositoryManagerFactory#newInstance(org.eclipse.aether.RepositorySystemSession,
-     *      org.eclipse.aether.repository.LocalRepository)
-     */
-    @Override
-    public LocalRepositoryManager newInstance(RepositorySystemSession session, LocalRepository repository)
-            throws NoLocalRepositoryManagerException {
-        LocalRepositoryManagerFactory delegate = lookupDelegate();
-
-        log.debug("Creating a new SrcdepsLocalRepositoryManager");
-        return new SrcdepsLocalRepositoryManager(delegate.newInstance(session, repository), buildService, pathLocker, configurationProducer);
     }
 
     /**
@@ -141,5 +126,25 @@ public class SrcdepsRepositoryManagerFactory implements LocalRepositoryManagerFa
                 "Could not find [%s] in the list of available LocalRepositoryManagerFactory implementations",
                 preferedDelegateFactoryName));
 
+    }
+
+    /**
+     * Looks up the delegate using {@link #lookupDelegate()}, calls
+     * {@link SrcdepsRepositoryManagerFactory#newInstance(RepositorySystemSession, LocalRepository)} on the delegate
+     * producing a delegate {@link LocalRepositoryManager} that is passed to
+     * {@link SrcdepsLocalRepositoryManager#SrcdepsLocalRepositoryManager(LocalRepositoryManager, Provider, BuildService)}.
+     * The new {@link SrcdepsLocalRepositoryManager} instance is then returned.
+     *
+     * @see org.eclipse.aether.spi.localrepo.LocalRepositoryManagerFactory#newInstance(org.eclipse.aether.RepositorySystemSession,
+     *      org.eclipse.aether.repository.LocalRepository)
+     */
+    @Override
+    public LocalRepositoryManager newInstance(RepositorySystemSession session, LocalRepository repository)
+            throws NoLocalRepositoryManagerException {
+        LocalRepositoryManagerFactory delegate = lookupDelegate();
+
+        log.debug("Creating a new SrcdepsLocalRepositoryManager");
+        return new SrcdepsLocalRepositoryManager(delegate.newInstance(session, repository), buildService, scmService,
+                pathLocker, configurationProducer);
     }
 }
