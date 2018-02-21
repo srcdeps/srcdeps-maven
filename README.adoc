@@ -85,6 +85,36 @@ which shows a Maven project can depend on a source revision of a Gradle project.
   upgrading.
 
 
+== Source dependencies pointing at a branch
+
+If you decide to depend on a branch by e.g.
+
+[source,xml]
+----
+<dependency>
+  <groupId>org.my-org.my-group</groupId>
+  <artifactId>my-artifact</artifactId>
+  <version>1.2.3-SRC-branch-my-special-branch</version>
+</dependency>
+----
+
+then you need to know the following:
+
+* `my-special-branch` is fetched at most once per JVM.
+* Outer build containing the above snippet is one JVM and inner builds taking care for building `my-special-branch`
+  or any other source dependencies are separate JVMs.
+* Hence if you have two projects in your dependency hierarchy depending on
+  `org.my-org.my-group:my-artifact:1.2.3-SRC-branch-my-special-branch` the two JVMs taking care for building it may
+  clash by fetching two different states of the branch at two different points in time.
+* `my-special-branch` is rebuilt only if its `HEAD` has changed with the last fetch.
+* This means that if there is no clash, `my-special-branch` is built at most once per whole build set that includes the
+  top level outer build and all its recursive inner builds. In other words, there is no rebuild if `HEAD` has not
+  changed since the last build of the given branch.
+* In case of a clash, the behavior is untested. In the worst case, the clashing JVMs may all fire builds that will
+  re-install new artifacts to local Maven repository in the middle of the outermost build. One half of the build would
+  thus see `org.my-org.my-group:my-artifact:1.2.3-SRC-branch-my-special-branch` built from one commit and the other half
+  would see `org.my-org.my-group:my-artifact:1.2.3-SRC-branch-my-special-branch` built from a different commit.
+
 == Misc.
 
 * All code and contributions are under link:/LICENSE.txt[Apache License]
