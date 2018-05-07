@@ -1,8 +1,10 @@
-= Srcdeps for Maven Configuration Guide
+image::doc/images/srcdeps-for-maven.svg[ec4j,height=60,alt=srcdeps for Maven]
 
-The behavior of srcdeps is controlled through two configuration files:
+= `srcdeps` for Maven Configuration Guide
 
-<<extensions-xml>> - make Maven aware of srcdeps +
+The behavior of `srcdeps` is controlled through two configuration files:
+
+<<extensions-xml>> - make Maven aware of `srcdeps` +
 <<srcdeps-yaml>> - the main srcdeps configuration file
 
 Note that both files can be initialized by running our `srcdeps-maven-plugin`'s `init` mojo the in the root
@@ -16,7 +18,8 @@ mvn org.srcdeps.mvn:srcdeps-maven-plugin:init
 [[extensions-xml]]
 == 1. `.mvn/extensions.xml`
 
-`srcdeps-maven-local-repository` needs to be declared as a Maven Core Extension in `.mvn/extensions.xml` of the maven project.
+`srcdeps-maven-local-repository` needs to be declared as a Maven Core Extension in `.mvn/extensions.xml`
+of the maven project.
 
 [source,xml]
 ----
@@ -49,7 +52,7 @@ there is no `srcdeps.yaml` in the root directory.
 
 [source,yaml]
 ----
-configModelVersion: 2.2
+configModelVersion: 2.3
 repositories:
   org.my-group:
     includes:
@@ -60,3 +63,72 @@ repositories:
                                                 # the first successful checkout will count
 
 ----
+
+== 3. Setting dependency versions
+
+There are two alternative ways how you can define which source repository reference should be used to build your
+dependency: in `pom.xml` or in `srcdeps.yaml`.
+
+[[srcdeps-in-pom-xml]]
+=== 3.1 In `pom.xml`
+
+Defining source repository refs in `pom.xml` is older and perhaps more straightforward:
+
+[source,yaml]
+----
+    <dependency>
+      <groupId>org.my-group</groupId>
+      <artifactId>my-artifact</artifactId>
+      <version>0.0.1-SRC-revision-66ea95d890531f4eaaa5aa04a9b1c69b409dcd0b</version>
+    </dependency>
+----
+
+The `-SRC-` infix in the version makes `srcdeps-maven-local-repository` detect the dependency as source
+dependency. The part after the `-SRC-` infix is supposed to be a dash separated pair of `refType` and `refName`.
+`refType` is one of `revision`, `branch` or `tag` and the `refName` is the actual commitId, branch name or
+tag name.
+
+Examples:
+
+* `0.0.1-SRC-revision-66ea95d890531f4eaaa5aa04a9b1c69b409dcd0b`
+* `1.2.3-SRC-branch-1.2.x`
+* `2.0.1-SRC-tag-2.0.1`
+
+The part before `-SRC-` has no significance for `srcdeps`. It also has no significance for Maven. It may be
+important for Gradle when resolving version conflicts; Gradle prefers higher versions by default. A practical reason
+to keep it there is to have a mnemonic that helps a human reader to set her expectations about the compatibility of
+the dependency.
+
+[[srcdeps-in-srcdeps-yaml]]
+=== 3.2 in `srcdeps.yaml` (since `srcdeps-maven` 3.3.0)
+
+If you do not want or cannot change the `pom.xml`, you can achieve a similar result by using
+`buildVersionPattern` and `buildRef` of `srcdeps.yaml`.
+
+[source,yaml]
+----
+configModelVersion: 2.3
+repositories:
+  org.my-group:
+    includes:
+    - org.my-group:*:*  # if one of the includes matches the groupId of a -SRC- dependency,
+                        # then the following urls will be used to build that dependency
+    urls:
+    - https://github.com/my-org/my-project.git  # If you list multiple SCM repos here then only
+                                                # the first successful checkout will count
+    buildVersionPattern: .*-SNAPSHOT  # versions matching .*-SNAPSHOT pattern will be built
+    buildRef: branch-1.2.x            # using branch 1.2.x from https://github.com/my-org/my-project.git
+----
+
+If you combine the above `srcdeps.yaml` with a `pom.xml` like the following
+
+----
+    <dependency>
+      <groupId>org.my-group</groupId>
+      <artifactId>my-artifact</artifactId>
+      <version>0.0.1-SNAPSHOT</version>
+    </dependency>
+----
+
+ `srcdeps` will build the snapshot
+of `org.my-group:my-artifact` from the remote branch 1.2.x every time you build the dependent project.

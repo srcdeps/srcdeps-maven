@@ -41,6 +41,8 @@ import org.srcdeps.core.BuildRefStore;
 import org.srcdeps.core.BuildRequest;
 import org.srcdeps.core.BuildRequestId;
 import org.srcdeps.core.BuildService;
+import org.srcdeps.core.ConfigurationQueryService;
+import org.srcdeps.core.ConfigurationQueryService.ScmRepositoryResult;
 import org.srcdeps.core.FetchId;
 import org.srcdeps.core.FetchLog;
 import org.srcdeps.core.ScmService;
@@ -82,40 +84,15 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
         return Collections.unmodifiableList(result);
     }
 
-    /**
-     * Finds the first {@link ScmRepository} associated with the given {@code groupId:artifactId:version} triple.
-     *
-     * @param repositories
-     * @param groupId
-     * @param artifactId
-     * @param version
-     * @return the matching {@link ScmRepository}
-     */
-    private static ScmRepository findScmRepo(List<ScmRepository> repositories, String groupId, String artifactId,
-            String version) {
-        for (ScmRepository scmRepository : repositories) {
-            if (scmRepository.getGavSet().contains(groupId, artifactId, version)) {
-                return scmRepository;
-            }
-        }
-        throw new IllegalStateException(
-                String.format("No srcdeps SCM repository configured in srcdeps.yaml for artifact [%s:%s:%s]", groupId,
-                        artifactId, version));
-    }
-
     private final BuildDirectoriesManager buildDirectoriesManager;
-
     private final BuildRefStore buildRefStore;
     private final BuildService buildService;
-
+    private final Configuration configuration;
     private final ConfigurationProducer configurationProducer;
-
+    private final ConfigurationQueryService configurationQueryService;
     private final LocalRepositoryManager delegate;
-
     private final FetchLog fetchLog;
-
     private final ScmService scmService;
-
     private final Path scrdepsDir;
 
     public SrcdepsLocalRepositoryManager(LocalRepositoryManager delegate, BuildService buildService,
@@ -129,6 +106,8 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
         this.buildDirectoriesManager = new BuildDirectoriesManager(scrdepsDir, pathLocker);
         this.configurationProducer = configurationProducer;
         this.fetchLog = new FetchLog();
+        this.configuration = configurationProducer.getConfiguration();
+        this.configurationQueryService = new ConfigurationQueryService(this.configuration);
     }
 
     /**
@@ -153,6 +132,99 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
         delegate.add(session, request);
     }
 
+    private LocalArtifactResult buildDependency(Artifact artifact, ScmRepository scmRepo, LocalArtifactResult result,
+            SrcVersion srcVersion, RepositorySystemSession session, LocalArtifactRequest request,
+            boolean assumeMutable) {
+        final FetchId fetchId = new FetchId(scmRepo.getId(), scmRepo.getUrls());
+        if (fetchLog.contains(fetchId)) {
+            log.debug(
+                    "Srcdeps SCM repository {} has been maked as built and up-to-date in this JVM. The artifact {} must be there in the local maven repository",
+                    fetchId, artifact);
+            return result;
+        }
+
+        try (PathLock projectBuildDir = buildDirectoriesManager.openBuildDirectory(scmRepo.getIdAsPath(), srcVersion)) {
+
+            /* query the delegate again, because things may have changed since we requested the lock */
+            final LocalArtifactResult result2 = delegate.find(session, request);
+            if (!assumeMutable && srcVersion.isImmutable() && result2.isAvailable()) {
+                log.debug("Srcdeps found {} in the local maven repository; no need to rebuild", artifact);
+                return result2;
+            } else if (fetchLog.contains(fetchId)) {
+                log.debug(
+                        "Srcdeps SCM repository {} has been maked as built and up-to-date in this JVM. The artifact {} must be there in the local maven repository",
+                        fetchId, artifact);
+                return result2;
+            } else {
+                /* The artifact is not available in the local repo, we probably need to build */
+                BuilderIo builderIo = scmRepo.getBuilderIo();
+                IoRedirects ioRedirects = IoRedirects.builder() //
+                        .stdin(IoRedirects.parseUri(builderIo.getStdin())) //
+                        .stdout(IoRedirects.parseUri(builderIo.getStdout())) //
+                        .stderr(IoRedirects.parseUri(builderIo.getStderr())) //
+                        .build();
+
+                List<String> buildArgs = enhanceBuildArguments(scmRepo.getBuildArguments(),
+                        configurationProducer.getConfigurationLocation(),
+                        delegate.getRepository().getBasedir().getAbsolutePath());
+
+                BuildRequest buildRequest = BuildRequest.builder() //
+                        .dependentProjectRootDirectory(configurationProducer.getMultimoduleProjectRootDirectory()) //
+                        .projectRootDirectory(projectBuildDir.getPath()) //
+                        .scmUrls(scmRepo.getUrls()) //
+                        .srcVersion(srcVersion) //
+                        .version(artifact.getVersion()) //
+                        .buildArguments(buildArgs) //
+                        .timeoutMs(scmRepo.getBuildTimeout().toMilliseconds()) //
+                        .skipTests(scmRepo.isSkipTests()) //
+                        .forwardProperties(configuration.getForwardProperties()) //
+                        .addDefaultBuildArguments(scmRepo.isAddDefaultBuildArguments()) //
+                        .verbosity(scmRepo.getVerbosity()) //
+                        .ioRedirects(ioRedirects) //
+                        .versionsMavenPluginVersion(scmRepo.getMaven().getVersionsMavenPluginVersion())
+                        .gradleModelTransformer(scmRepo.getGradle().getModelTransformer()).build();
+
+                final BuildRequestId buildRequestId = buildRequest.getId();
+                final String newCommitId = scmService.checkout(buildRequest);
+
+                if (!srcVersion.isImmutable()) {
+                    /* A branch */
+                    log.info("Srcdeps mapped artifact {} to revision {}", artifact, newCommitId);
+                    if (result2.isAvailable() && newCommitId.equals(buildRefStore.retrieve(buildRequestId))) {
+                        /*
+                         * we have already built this branch in the past and the state of the branch has not changed
+                         */
+                        log.debug(
+                                "Srcdeps version {} of {} currently at commit {} was built in the past; no need to build again",
+                                artifact.getVersion(), scmRepo.getId(), newCommitId);
+                        fetchLog.add(fetchId);
+                        return result2;
+                    }
+                }
+
+                log.debug("Srcdeps requires a rebuild of {}, triggered by {} lookup", fetchId, artifact);
+                buildService.build(buildRequest);
+
+                fetchLog.add(fetchId);
+
+                buildRefStore.store(buildRequestId, newCommitId);
+
+                /* check once again if the delegate sees the newly built artifact */
+                final LocalArtifactResult newResult = delegate.find(session, request);
+                if (!newResult.isAvailable()) {
+                    log.error(
+                            "Srcdeps build succeeded but the artifact {} is still not available in the local repository",
+                            artifact);
+                }
+                return newResult;
+            }
+
+        } catch (BuildException | IOException e) {
+            log.error("Srcdeps could not build " + request, e);
+        }
+        return result;
+    }
+
     /**
      * In case the {@link #delegate} does not find the given artifact and the given artifact's version string is a
      * srcdeps version string, then the version is built from source and returned.
@@ -166,9 +238,9 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
         log.trace("Srcdeps looking up locally {}", artifact);
         final LocalArtifactResult result = delegate.find(session, request);
 
-        String version = artifact.getVersion();
+        final String version = artifact.getVersion();
         if (SrcVersion.isSrcVersion(version)) {
-
+            /* A source dependency defined in pom.xml */
             final SrcVersion srcVersion = SrcVersion.parse(version);
             if (srcVersion.isImmutable() && result.isAvailable()) {
                 /* Only tags and revisions do not need to get rebuilt once there in the local repo */
@@ -176,107 +248,28 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                 return result;
             }
 
-            final Configuration configuration = configurationProducer.getConfiguration();
-
             if (configuration.isSkip()) {
                 log.debug("Srcdeps is configured to be skipped");
             } else {
-                final ScmRepository scmRepo = findScmRepo(configuration.getRepositories(), artifact.getGroupId(),
-                        artifact.getArtifactId(), version);
+                final ScmRepository scmRepo = configurationQueryService
+                        .findScmRepo(artifact.getGroupId(), artifact.getArtifactId(), version).assertSuccess()
+                        .getRepository();
 
                 /* Ensure that we fetch and build a branch just once per outer build */
-                final FetchId fetchId = new FetchId(scmRepo.getId(), scmRepo.getUrls());
-                if (fetchLog.contains(fetchId)) {
-                    log.debug(
-                            "Srcdeps SCM repository {} has been maked as built and up-to-date in this JVM. The artifact {} must be there in the local maven repository",
-                            fetchId, artifact);
-                    return result;
-                }
-
-                try (PathLock projectBuildDir = buildDirectoriesManager.openBuildDirectory(scmRepo.getIdAsPath(),
-                        srcVersion)) {
-
-                    /* query the delegate again, because things may have changed since we requested the lock */
-                    final LocalArtifactResult result2 = delegate.find(session, request);
-                    if (srcVersion.isImmutable() && result2.isAvailable()) {
-                        log.debug("Srcdeps found {} in the local maven repository; no need to rebuild", artifact);
-                        return result2;
-                    } else if (fetchLog.contains(fetchId)) {
-                        log.debug(
-                                "Srcdeps SCM repository {} has been maked as built and up-to-date in this JVM. The artifact {} must be there in the local maven repository",
-                                fetchId, artifact);
-                        return result2;
-                    } else {
-                        /* The artifact is not available in the local repo, we probably need to build */
-                        BuilderIo builderIo = scmRepo.getBuilderIo();
-                        IoRedirects ioRedirects = IoRedirects.builder() //
-                                .stdin(IoRedirects.parseUri(builderIo.getStdin())) //
-                                .stdout(IoRedirects.parseUri(builderIo.getStdout())) //
-                                .stderr(IoRedirects.parseUri(builderIo.getStderr())) //
-                                .build();
-
-                        List<String> buildArgs = enhanceBuildArguments(scmRepo.getBuildArguments(),
-                                configurationProducer.getConfigurationLocation(),
-                                delegate.getRepository().getBasedir().getAbsolutePath());
-
-                        BuildRequest buildRequest = BuildRequest.builder() //
-                                .dependentProjectRootDirectory(
-                                        configurationProducer.getMultimoduleProjectRootDirectory()) //
-                                .projectRootDirectory(projectBuildDir.getPath()) //
-                                .scmUrls(scmRepo.getUrls()) //
-                                .srcVersion(srcVersion) //
-                                .buildArguments(buildArgs) //
-                                .timeoutMs(scmRepo.getBuildTimeout().toMilliseconds()) //
-                                .skipTests(scmRepo.isSkipTests()) //
-                                .forwardProperties(configuration.getForwardProperties()) //
-                                .addDefaultBuildArguments(scmRepo.isAddDefaultBuildArguments()) //
-                                .verbosity(scmRepo.getVerbosity()) //
-                                .ioRedirects(ioRedirects) //
-                                .versionsMavenPluginVersion(scmRepo.getMaven().getVersionsMavenPluginVersion())
-                                .gradleModelTransformer(scmRepo.getGradle().getModelTransformer()).build();
-
-                        final BuildRequestId buildRequestId = buildRequest.getId();
-                        final String newCommitId = scmService.checkout(buildRequest);
-
-                        if (!srcVersion.isImmutable()) {
-                            /* A branch */
-                            log.info("Srcdeps mapped artifact {} to revision {}", artifact, newCommitId);
-                            if (result2.isAvailable() && newCommitId.equals(buildRefStore.retrieve(buildRequestId))) {
-                                /*
-                                 * we have already built this branch in the past and the state of the branch has not
-                                 * changed
-                                 */
-                                log.debug(
-                                        "Srcdeps version {} of {} currently at commit {} was built in the past; no need to build again",
-                                        artifact.getVersion(), scmRepo.getId(), newCommitId);
-                                fetchLog.add(fetchId);
-                                return result2;
-                            }
-                        }
-
-                        log.debug("Srcdeps requires a rebuild of {}, triggered by {} lookup", fetchId, artifact);
-                        buildService.build(buildRequest);
-
-                        fetchLog.add(fetchId);
-
-                        buildRefStore.store(buildRequestId, newCommitId);
-
-                        /* check once again if the delegate sees the newly built artifact */
-                        final LocalArtifactResult newResult = delegate.find(session, request);
-                        if (!newResult.isAvailable()) {
-                            log.error(
-                                    "Srcdeps build succeeded but the artifact {} is still not available in the local repository",
-                                    artifact);
-                        }
-                        return newResult;
-                    }
-
-                } catch (BuildException | IOException e) {
-                    log.error("Srcdeps could not build " + request, e);
-                }
-
+                return buildDependency(artifact, scmRepo, result, srcVersion, session, request, false);
             }
-
+        } else {
+            final ScmRepositoryResult queryResult = configurationQueryService.findScmRepo(artifact.getGroupId(),
+                    artifact.getArtifactId(), version);
+            if (queryResult.getRepository() != null && queryResult.matchesBuildVersionPattern()) {
+                /* A source dependency defined in srcdeps.yaml */
+                if (configuration.isSkip()) {
+                    log.debug("Srcdeps is configured to be skipped");
+                } else {
+                    final ScmRepository scmRepo = queryResult.getRepository();
+                    return buildDependency(artifact, scmRepo, result, scmRepo.getBuildRef(), session, request, true);
+                }
+            }
         }
 
         return result;

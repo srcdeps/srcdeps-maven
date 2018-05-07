@@ -50,3 +50,9 @@ repositories:
     # At least one URL is required
     urls:
     - git:https://github.com/srcdeps/srcdeps-test-artifact.git
+
+    # Build any SNAPSHOT version 
+    buildVersionPattern: .*-SNAPSHOT
+
+    # Build the versions matching `buildVersionPattern` using the named revision
+    buildRef: revision-67e9a1480f6de434e513c3ced2b4e952dce5ddc0
