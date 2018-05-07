@@ -1,5 +1,5 @@
 #
-# Copyright 2015-2016 Maven Source Dependencies
+# Copyright 2015-2018 Maven Source Dependencies
 # Plugin contributors as indicated by the @author tags.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,11 +16,11 @@
 #
 
 environment:
-  JAVA_HOME: C:\Program Files\Java\jdk1.7.0
+  JAVA_HOME: C:\Program Files\Java\jdk1.8.0
 install:
   - cmd: SET PATH=C:\Users\appveyor\.m2\wrapper\dists\apache-maven-3.3.3-bin\3opbjp6rgl6qp7k2a6tljcpvgp\apache-maven-3.3.3\bin;%JAVA_HOME%\bin;%PATH%
 build_script:
-  - .\mvnw.cmd clean install -B -Prun-its
+  - .\mvnw.cmd clean install -B
 on_failure:
   - echo "failed"
   - type srcdeps-maven-quickstarts\target\test-projects\SrcdepsLocalRepositoryManagerTest_mvnGitInterdepModules[3.3.1]_srcdeps-mvn-git-interdep-modules-quickstart\log.txt
