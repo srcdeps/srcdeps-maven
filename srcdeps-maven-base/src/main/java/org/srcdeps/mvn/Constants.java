@@ -21,6 +21,6 @@ public interface Constants {
     /** See the bin/mvn or bin/mvn.cmd script of your maven distro, where maven.multiModuleProjectDirectory is set */
     String MAVEN_MULTI_MODULE_PROJECT_DIRECTORY_PROPERTY = "maven.multiModuleProjectDirectory";
 
-    String SRCDEPS_MAVEN_VERSION = "3.3.0"; // @srcdeps.version@
+    String SRCDEPS_MAVEN_VERSION = "3.3.1-SNAPSHOT"; // @srcdeps.version@
 
 }
