@@ -23,6 +23,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.jar.JarInputStream;
+import java.util.jar.Manifest;
 import java.util.regex.Pattern;
 
 import org.junit.Assert;
@@ -42,93 +44,10 @@ import io.takari.maven.testing.executor.MavenRuntime;
 import io.takari.maven.testing.executor.MavenRuntime.MavenRuntimeBuilder;
 
 public abstract class AbstractMavenDepsIntegrationTest {
-    protected static final Path basedir = Paths.get(System.getProperty("basedir", new File("").getAbsolutePath()));
-    protected static final String encoding = System.getProperty("project.build.sourceEncoding");
-    private static final Logger log = LoggerFactory.getLogger(AbstractMavenDepsIntegrationTest.class);
-    protected static final String mrmSettingsXmlPath = System.getProperty("mrm.settings.xml");
-    protected static final MavenLocalRepository mvnLocalRepo;
-    protected static final Path mvnLocalRepoPath;
-    protected static final String projectVersion = System.getProperty("project.version");
-    protected static final String QUICKSTART_GROUPID = "org.srcdeps.mvn.quickstarts";
-    protected static final String QUICKSTART_VERSION = "1.0-SNAPSHOT";
-    protected static final Pattern replacementPattern = Pattern
-            .compile(Pattern.quote("<version>") + "[^<]+" + Pattern.quote("</version><!-- @srcdeps.version@ -->"));
-    protected static final Path srcdepsQuickstartsPath;
-
-    static {
-        srcdepsQuickstartsPath = basedir.resolve("../srcdeps-maven-quickstarts").normalize();
-        mvnLocalRepoPath = basedir.resolve("target/mvn-local-repo");
-        mvnLocalRepo = new MavenLocalRepository(mvnLocalRepoPath);
-    }
-
-    public static void assertExists(Path path) {
-        Assert.assertTrue(String.format("File or directory does not exist [%s]", path.toString()), Files.exists(path));
-    }
-
-    public static void assertNotExists(Path path) {
-        Assert.assertTrue(String.format("File or directory exists [%s], but should not", path.toString()),
-                !Files.exists(path));
-    }
-
-    @BeforeClass
-    public static void beforeClass() throws IOException {
-
-        SrcdepsCoreUtils.ensureDirectoryExistsAndEmpty(mvnLocalRepo.getRootDirectory());
-
-        System.setProperty(Maven.getSrcdepsMavenSettingsProperty(), mrmSettingsXmlPath);
-
-        Assert.assertTrue("[" + mrmSettingsXmlPath + "] should exist", Files.exists(Paths.get(mrmSettingsXmlPath)));
-        Assert.assertNotNull("project.build.sourceEncoding property must be set", encoding);
-        Assert.assertNotNull("project.version property must be set", projectVersion);
-    }
-
-    protected static String groupId(String project) {
-        return QUICKSTART_GROUPID + "." + project;
-    }
-
-    protected static String pom(String groupId, String artifactId, String version) {
-        return groupId + ":" + artifactId + ":" + version + ":pom";
-    }
-
-    protected static String pomJar(String groupId, String artifactId, String version) {
-        return groupId + ":" + artifactId + ":" + version + ":[pom,jar]";
-    }
-
-    @Rule
-    public final TestResources resources = new TestResources(srcdepsQuickstartsPath.toString(),
-            "target/test-projects") {
-
-        @Override
-        public File getBasedir(String project) throws IOException {
-
-            File result = super.getBasedir(project);
-
-            Path extensionsXmlPath = result.toPath().resolve(".mvn/extensions.xml");
-
-            String extensionsXmlContent = new String(Files.readAllBytes(extensionsXmlPath), encoding);
-
-            String newContent = replacementPattern.matcher(extensionsXmlContent)
-                    .replaceAll("<version>" + projectVersion + "</version>");
-
-            Assert.assertNotEquals(newContent, extensionsXmlContent);
-
-            Files.write(extensionsXmlPath, newContent.getBytes(encoding));
-
-            return result;
-        }
-
-    };
-
-    public final MavenRuntime verifier;
-
-    public AbstractMavenDepsIntegrationTest(MavenRuntimeBuilder runtimeBuilder) throws IOException, Exception {
-        this.verifier = runtimeBuilder.withExtension(new File("target/classes").getCanonicalFile()).build();
-    }
-
     protected static class LocalMavenRepoVerifier {
-        private final String project;
-        private final List<Gavtc> expectedToExist;
         private final List<Gavtc> expectedNotToExist;
+        private final List<Gavtc> expectedToExist;
+        private final String project;
 
         protected LocalMavenRepoVerifier(String project, String[] gavtcPatternsExpectedToExist) {
             this(project, gavtcPatternsExpectedToExist, new String[0]);
@@ -167,6 +86,96 @@ public abstract class AbstractMavenDepsIntegrationTest {
                 assertNotExists(mvnLocalRepo.resolve(gavtc));
             }
         }
+
+    }
+    protected static final Path basedir = Paths.get(System.getProperty("basedir", new File("").getAbsolutePath()));
+    protected static final String encoding = System.getProperty("project.build.sourceEncoding");
+    private static final Logger log = LoggerFactory.getLogger(AbstractMavenDepsIntegrationTest.class);
+    protected static final String mrmSettingsXmlPath = System.getProperty("mrm.settings.xml");
+    protected static final MavenLocalRepository mvnLocalRepo;
+    protected static final Path mvnLocalRepoPath;
+    protected static final String projectVersion = System.getProperty("project.version");
+    protected static final String QUICKSTART_GROUPID = "org.srcdeps.mvn.quickstarts";
+    protected static final String QUICKSTART_VERSION = "1.0-SNAPSHOT";
+    protected static final Pattern replacementPattern = Pattern
+            .compile(Pattern.quote("<version>") + "[^<]+" + Pattern.quote("</version><!-- @srcdeps.version@ -->"));
+
+    protected static final Path srcdepsQuickstartsPath;
+
+    static {
+        srcdepsQuickstartsPath = basedir.resolve("../srcdeps-maven-quickstarts").normalize();
+        mvnLocalRepoPath = basedir.resolve("target/mvn-local-repo");
+        mvnLocalRepo = new MavenLocalRepository(mvnLocalRepoPath);
+    }
+
+    public static void assertExists(Path path) {
+        Assert.assertTrue(String.format("File or directory does not exist [%s]", path.toString()), Files.exists(path));
+    }
+
+    public static void assertNotExists(Path path) {
+        Assert.assertTrue(String.format("File or directory exists [%s], but should not", path.toString()),
+                !Files.exists(path));
+    }
+
+    @BeforeClass
+    public static void beforeClass() throws IOException {
+
+        SrcdepsCoreUtils.ensureDirectoryExistsAndEmpty(mvnLocalRepo.getRootDirectory());
+
+        System.setProperty(Maven.getSrcdepsMavenSettingsProperty(), mrmSettingsXmlPath);
+
+        Assert.assertTrue("[" + mrmSettingsXmlPath + "] should exist", Files.exists(Paths.get(mrmSettingsXmlPath)));
+        Assert.assertNotNull("project.build.sourceEncoding property must be set", encoding);
+        Assert.assertNotNull("project.version property must be set", projectVersion);
+    }
+
+    protected static String groupId(String project) {
+        return QUICKSTART_GROUPID + "." + project;
+    }
+
+    protected static Manifest loadManifest(Gavtc gavtc) throws IOException {
+        final Path path = mvnLocalRepo.resolve(gavtc);
+        try (JarInputStream jarStream = new JarInputStream(Files.newInputStream(path))) {
+            return jarStream.getManifest();
+        }
+    }
+
+    protected static String pom(String groupId, String artifactId, String version) {
+        return groupId + ":" + artifactId + ":" + version + ":pom";
+    }
+
+    protected static String pomJar(String groupId, String artifactId, String version) {
+        return groupId + ":" + artifactId + ":" + version + ":[pom,jar]";
+    }
+
+    @Rule
+    public final TestResources resources = new TestResources(srcdepsQuickstartsPath.toString(),
+            "target/test-projects") {
+
+        @Override
+        public File getBasedir(String project) throws IOException {
+
+            File result = super.getBasedir(project);
+
+            Path extensionsXmlPath = result.toPath().resolve(".mvn/extensions.xml");
+
+            String extensionsXmlContent = new String(Files.readAllBytes(extensionsXmlPath), encoding);
+
+            String newContent = replacementPattern.matcher(extensionsXmlContent)
+                    .replaceAll("<version>" + projectVersion + "</version>");
+
+            Assert.assertNotEquals(newContent, extensionsXmlContent);
+
+            Files.write(extensionsXmlPath, newContent.getBytes(encoding));
+
+            return result;
+        }
+
+    };
+
+    public final MavenRuntime verifier;
+    public AbstractMavenDepsIntegrationTest(MavenRuntimeBuilder runtimeBuilder) throws IOException, Exception {
+        this.verifier = runtimeBuilder.withExtension(new File("target/classes").getCanonicalFile()).build();
     }
 
 

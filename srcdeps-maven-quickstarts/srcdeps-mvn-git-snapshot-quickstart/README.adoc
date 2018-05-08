@@ -1,0 +1,30 @@
+= srcdeps-mvn-git-snapshot-quickstart
+
+A project containing a SNAPSHOT dependency that has a matching `buildVersionPattern` set in `srcdeps.yaml`.
+The SNAPSHOT dependency is thus rebuilt each time the dependent project is built.
+
+== System requirements
+
+* Maven 3.3.1 or newer
+* Java 7 or newer
+
+== Recommended study order
+
+* link:.mvn/extensions.xml[`.mvn/extensions.xml`]
+* link:srcdeps.yaml[`srcdeps.yaml`] and its documentation under link:../../../doc/srcdeps-maven-configuration.adoc and
+  https://github.com/srcdeps/srcdeps-core/blob/master/doc/srcdeps.yaml .
+* Nothing special in link:pom.xml#L46[`pom.xml`]
+* Issue `mvn clean install` on command line in the directory where this README file resides.
+* Check in the output of the above `mvn` command if the
+  link:jar/src/test/java/org/l2x6/srcdeps/quickstarts/mvn/git/revision/AppClientTest.java#L26[test] passed
+* Check if the version `0.0.2-SNAPSHOT` of
+  `org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service` was installed in your local Maven
+  repository. Open `META-INF/MANIFEST.MF` the jar and ensure it has
+  `Built-From-Git-SHA1: 67e9a1480f6de434e513c3ced2b4e952dce5ddc0`
+* Check the directory where the `srcdeps-test-artifact` was built:
+  `${maven.repo.local}/../srcdeps/org.l2x6.maven.srcdeps.itest` - i.e. typically
+  `~/.m2/srcdeps/org.l2x6.maven.srcdeps.itest`
+
+== Feedback
+
+via link:https://github.com/srcdeps/srcdeps-maven/issues[scrdeps-maven Github Issues]

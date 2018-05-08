@@ -1,8 +1,12 @@
-= `srcdeps` for Maven
+image::doc/images/srcdeps-for-maven.svg[ec4j,height=60,alt=srcdeps for Maven]
+
+{empty}
 
 ifdef::env-github[]
-[link=https://travis-ci.org/srcdeps/srcdeps-maven]
-image:https://travis-ci.org/srcdeps/srcdeps-maven.svg?branch=master["Build Status", link="https://travis-ci.org/srcdeps/srcdeps-maven"]
+https://github.com/srcdeps/srcdeps-maven/blob/master/LICENSE[image:https://img.shields.io/github/license/srcdeps/srcdeps-maven.svg[License]]
+http://search.maven.org/#search%7Cga%7C1%7Corg.srcdeps.mvn[image:https://img.shields.io/maven-central/v/org.srcdeps.mvn/srcdeps-maven-local-repository.svg[Maven Central]]
+http://travis-ci.org/srcdeps/srcdeps-maven[image:https://img.shields.io/travis/srcdeps/srcdeps-maven/master.svg?logo=travis&color=white&label=Travis+CI[Travis CI build status]]
+https://ci.appveyor.com/project/ppalaga/srcdeps-maven[image:https://img.shields.io/appveyor/ci/ppalaga/srcdeps-maven/master.svg?logo=appveyor&color=white&label=AppVeyor+Windows+CI[AppVeyor Windows CI build status]]
 endif::[]
 
 A tool for building dependencies of a Maven project from their sources during the build of the dependent Maven project.
@@ -21,26 +25,29 @@ Maven repository. It may happen for various reasons, such as:
 * The dependency project has not released for whatever other reasons (other priorities, project discontinued, ...)
   but you still need to consume some commit from their branch.
 * The dependency project is doing nasty things and you do not want to consume their binaries. You want to fork their
-  source repository, cherry-pick only some of their commits and let srcdeps build out of your fork on the fly.
+  source repository, cherry-pick only some of their commits and let `srcdeps` build out of your fork on the fly.
 
-Check this presentation find out more about source dependencies in Java: http://ppalaga.github.io/presentations/170508-jug-vienna/index.html
+Check this presentation to find out more about source dependencies in Java:
+
+* Slides: http://ppalaga.github.io/presentations/171020-geecon-prague/
+* Video: https://www.youtube.com/watch?v=ztLgGzJJxg4
 
 == `srcdeps` support for Maven
 
 You need to use Maven 3.3.1+ to build a Maven project that has source dependencies.
-As of `srcdeps-maven` version 3.2.0, a Maven project may depend not only on a source commit of another Maven project
+Since `srcdeps-maven` version 3.2.0, a Maven project may depend not only on a source commit of another Maven project
 but also on a source commit of a Gradle project.
 
 The present solution for Maven is leveraging the concept of Maven Core Extensions introduced in Maven 3.3.1.
 In particular, we provide an implementation of `LocalRepositoryManager` that delegates all the usual artifact
 lookup work to the standard local repository manager available in Maven class path, but it is watching carefully,
-if the requested artifact contains `-SRC-` in its version string. For such ones, the `srcdeps-core` library is
-called, to build what is necessary and install it to the Maven Local Repository. In other words, the dependencies
-are built and installed while they are looked up.
+if the requested artifact is marked as a source dependency either in `pom.xml` or in `srcdeps.yaml`. If so,
+the `srcdeps-core` library is called, to build what is necessary and install it to the Maven Local Repository.
+In other words, the dependencies are built and installed while they are looked up.
 
 === How to configure `srcdeps` for Maven
 
-We provide a maven plugin that initializes srcdeps configuration files `.mvn/extensions.xml` and
+We provide a maven plugin that initializes `srcdeps` configuration files `.mvn/extensions.xml` and
 `srcdeps.yaml`. Just run the following in the root directory of your project tree:
 
 [source,shell]
@@ -52,7 +59,7 @@ While the resulting `.mvn/extensions.xml` will mostly be ready to use, the usefu
 `srcdeps.yaml` file depends strongly on the completeness of your dependencies' pom files. You should review
 the generated `srcdeps.yaml` and adjust it manually.
 
-See link:doc/srcdeps-maven-configuration.adoc[Srcdeps for Maven Configuration Guide] for more details about
+See link:doc/srcdeps-maven-configuration.adoc[srcdeps for Maven Configuration Guide] for more details about
 `.mvn/extensions.xml` and `srcdeps.yaml`.
 
 Note that all options configurable in `srcdeps.yaml` can be overriden through system properties passed on the command
@@ -64,25 +71,36 @@ There is a couple of ready-to-build self-contained examples in the
 link:srcdeps-maven-quickstarts[srcdeps-maven-quickstarts] directory. Perhaps the most prominent of them are
 
 * The link:srcdeps-maven-quickstarts/srcdeps-mvn-git-revision-quickstart[srcdeps-mvn-git-revision-quickstart] that
-demonstrates how a Maven project can depend on a source revision of another Maven project.
+  demonstrates how a Maven project can depend on a source revision of another Maven project. The git revision of the
+  dependent project is set in `pom.xml` of the dependent project.
+* The link:srcdeps-maven-quickstarts/srcdeps-mvn-git-snapshot-quickstart[srcdeps-mvn-git-snapshot-quickstart] is
+  similar to the previous srcdeps-mvn-git-revision-quickstart but the revision of the dependency is defined in
+  `srcdeps.yaml` rather than in `pom.xml`. This is practical if you do not want to change `pom.xml` for some
+  reason.
 * The link:srcdeps-maven-quickstarts/srcdeps-mvn-git-gradle-source-dependency-quickstart[srcdeps-mvn-git-gradle-source-dependency-quickstart]
-which shows a Maven project can depend on a source revision of a Gradle project.
+  shows a Maven project depending on a source revision of a Gradle project.
 
 
-== How Srcdeps tools work
+== How `srcdeps` works
 
-* Srcdeps tools are supposed to build dependencies with versions matching `{whatever}-SRC-{srcVersionType}-{srcVersion}`
-* Any artifact having such a `-SRC-` version that is requested during the build needs to have an associated SCM
-  repository in the configuration. The configuration is stored in `srcdeps.yaml` under the top level
-  directory of the dependent project.
+* There are two ways to mark a dependency as a source dependency:
+  link:doc/srcdeps-maven-configuration.adoc#srcdeps-in-pom-xml[in `pom.xml`] or
+  link:doc/srcdeps-maven-configuration.adoc#srcdeps-in-srcdeps-yaml[in `srcdeps.yaml`].
+* As we noted above, `srcdeps` provides a custom Maven Local Repository implementation which intercepts the artifact
+  requests. If it spots a source dependency artifact it does the following:
+* It finds a SCM repository in `srcdeps.yaml` associated with the given artifact.
 * The URL of the associated SCM repository is used to fetch the sources of the dependency and checkout the desired revision.
   The sources are cloned to `${maven.repo.local}/../srcdeps/${scmRepo.id}`
-* Then, `srcdeps-core` changes the version in the sources to `{whatever}-SRC-{srcVersionType}-{srcVersion}`
-  using `versions-maven-plugin` in case the dependency is a Maven project, or a piece of gradle script injected
-  to `settings.gradle` if the dependency is a Gradle project.
+* Then, `srcdeps-core` changes the version in the sources to whatever version was requested using
+  `versions-maven-plugin` in case the dependency is a Maven project, or a piece of gradle script injected
+  to `settings.gradle` if the dependency is a Gradle project. This step is necessary because the version in
+  `pom.xml`/`gradle.build` as checked out from the remote source repository may be different from the
+  artifact version requested.
 * And finally, `srcdeps-core` builds the artifacts and installs them to the local Maven repository
-* `-SRC-` dependencies are build only if they are not found in local repository - so they prolong the build only when
-  upgrading.
+* As of `srcdeps-maven` 3.3.0, the source dependencies are rebuild during every build of the dependent project,
+  except for the following two cases which are considered immutable and are thus built and installed only once:
+** `tag` source dependency declared link:doc/srcdeps-maven-configuration.adoc#srcdeps-in-pom-xml[in `pom.xml`]
+** `revision`  source dependency declared link:doc/srcdeps-maven-configuration.adoc#srcdeps-in-srcdeps-yaml[in `srcdeps.yaml`]
 
 
 == Source dependencies pointing at a branch

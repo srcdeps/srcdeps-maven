@@ -18,12 +18,14 @@ package org.srcdeps.mvn.itest;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.jar.Manifest;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ResetCommand.ResetType;
@@ -32,6 +34,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.srcdeps.core.Gavtc;
 import org.srcdeps.core.util.SrcdepsCoreUtils;
 
 import io.takari.aether.localrepo.TakariLocalRepositoryManagerFactory;
@@ -449,6 +452,58 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
         };
 
         assertBuild(project, expectedGavtcs, new String[] {}, "clean", "install");
+    }
+
+    @Test
+    public void mvnGitSnapshotRevision() throws Exception {
+        final String project = "srcdeps-mvn-git-snapshot-quickstart";
+        final String depVersion = "0.0.2-SNAPSHOT";
+        final String srcVersion = "0.0.2-SRC-revision-67e9a1480f6de434e513c3ced2b4e952dce5ddc0";
+
+        String[] expectedGavtcs = new String[] { //
+                pom(groupId(project), project, QUICKSTART_VERSION), //
+                pomJar(groupId(project), project + "-jar", QUICKSTART_VERSION), //
+                pomJar(ORG_L2X6_MAVEN_SRCDEPS_ITEST_GROUPID, "srcdeps-test-artifact-api", depVersion), //
+                pomJar(ORG_L2X6_MAVEN_SRCDEPS_ITEST_GROUPID, "srcdeps-test-artifact-service", depVersion) //
+        };
+        String[] unexpectedGavtcs = new String[] { //
+                pomJar(ORG_L2X6_MAVEN_SRCDEPS_ITEST_GROUPID, "srcdeps-test-artifact-api", srcVersion), //
+                pomJar(ORG_L2X6_MAVEN_SRCDEPS_ITEST_GROUPID, "srcdeps-test-artifact-service", srcVersion) //
+        };
+        /* The first build: the snapshots will be removed before building */
+
+        assertBuild(project, expectedGavtcs, unexpectedGavtcs, "clean", "install");
+
+        final Gavtc serviceGavts = new Gavtc(ORG_L2X6_MAVEN_SRCDEPS_ITEST_GROUPID, "srcdeps-test-artifact-service", depVersion, "jar");
+        {
+            final Manifest manifest = loadManifest(serviceGavts);
+            Assert.assertNotNull(manifest);
+            Assert.assertEquals("67e9a1480f6de434e513c3ced2b4e952dce5ddc0", manifest.getMainAttributes().getValue("Built-From-Git-SHA1"));
+        }
+
+        /* The second build: malform one of the dependency artifacts and try to rebuid.
+         * A success will prove that the dependency artifact got rebuilt */
+        Path serviceJarPath = mvnLocalRepo.resolve(serviceGavts);
+        try (OutputStream in = Files.newOutputStream(serviceJarPath)) {
+            in.write(42);
+        }
+
+        LocalMavenRepoVerifier repoVerifier = new LocalMavenRepoVerifier(project, expectedGavtcs, unexpectedGavtcs);
+
+        WrappedMavenExecutionResult result = build(project, "clean", "install");
+        result //
+                .assertErrorFreeLog() //
+                .assertLogText("SrcdepsLocalRepositoryManager will decorate "
+                        + TakariLocalRepositoryManagerFactory.class.getName()) //
+        ;
+
+        repoVerifier.verify();
+        {
+            final Manifest manifest = loadManifest(serviceGavts);
+            Assert.assertNotNull(manifest);
+            Assert.assertEquals("67e9a1480f6de434e513c3ced2b4e952dce5ddc0", manifest.getMainAttributes().getValue("Built-From-Git-SHA1"));
+        }
+
     }
 
     @Test
