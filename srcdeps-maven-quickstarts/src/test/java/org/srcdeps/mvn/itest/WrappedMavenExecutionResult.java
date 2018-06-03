@@ -22,6 +22,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import org.srcdeps.core.util.SrcdepsCoreUtils;
+
 import io.takari.maven.testing.executor.MavenExecutionResult;
 
 public class WrappedMavenExecutionResult {
@@ -46,6 +48,21 @@ public class WrappedMavenExecutionResult {
     public WrappedMavenExecutionResult assertLogText(String text) {
         try {
             delegate.assertLogText(text);
+        } catch (AssertionError e) {
+            dumpLog();
+            e.printStackTrace();
+            throw e;
+        }
+        return this;
+    }
+
+    public WrappedMavenExecutionResult assertLogTextPath(String text) {
+        try {
+            if (SrcdepsCoreUtils.isWindows()) {
+                delegate.assertLogText(text.replace('/', File.separatorChar));
+            } else {
+                delegate.assertLogText(text);
+            }
         } catch (AssertionError e) {
             dumpLog();
             e.printStackTrace();

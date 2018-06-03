@@ -17,14 +17,10 @@
 package org.srcdeps.mvn.itest;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Map;
-import java.util.TreeMap;
 import java.util.jar.Manifest;
 
 import org.eclipse.jgit.api.Git;
@@ -35,6 +31,7 @@ import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srcdeps.core.Gavtc;
+import org.srcdeps.core.fs.PersistentBuildMetadataStore;
 import org.srcdeps.core.util.SrcdepsCoreUtils;
 
 import io.takari.aether.localrepo.TakariLocalRepositoryManagerFactory;
@@ -49,22 +46,10 @@ import io.takari.maven.testing.executor.junit.MavenJUnitTestRunner;
 @RunWith(MavenJUnitTestRunner.class)
 @MavenVersions({ "3.3.1" })
 public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationTest {
+
     private static final Logger log = LoggerFactory.getLogger(MavenDepsMavenIntegrationTest.class);
 
     protected static final String ORG_L2X6_MAVEN_SRCDEPS_ITEST_GROUPID = "org.l2x6.maven.srcdeps.itest";
-
-    private static Map<String, String> loadBuildRefs(Path basedir) throws IOException {
-        final Map<String, String> result = new TreeMap<>();
-        Path buildRefsPath = basedir.resolve("target/srcdeps/build-refs");
-        if (Files.exists(buildRefsPath)) {
-            try (DirectoryStream<Path> directoryStream = Files.newDirectoryStream(buildRefsPath)) {
-                for (Path path : directoryStream) {
-                    result.put(path.getFileName().toString(), new String(Files.readAllBytes(path), StandardCharsets.UTF_8));
-                }
-            }
-        }
-        return result;
-    }
 
     public MavenDepsMavenIntegrationTest(MavenRuntimeBuilder runtimeBuilder) throws Exception {
         super(runtimeBuilder);
@@ -178,9 +163,11 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
     public void mvnGitBranch() throws Exception {
         SrcdepsCoreUtils.deleteDirectory(basedir.resolve("target/srcdeps"));
 
+        PersistentBuildMetadataStore buildMetadataStore = new PersistentBuildMetadataStore(srcdepsBuildMetadataPath);
         {
-            final Map<String, String> buildRefs = loadBuildRefs(basedir);
-            Assert.assertEquals("found " + buildRefs, 0, buildRefs.size());
+            PersistentBuildMetadataStore.BuildRequestIdCollector consumer = new PersistentBuildMetadataStore.BuildRequestIdCollector();
+            buildMetadataStore.walkBuildRequestHashes(consumer);
+            Assert.assertEquals("found " + consumer.getHashes(), 0, consumer.getHashes().size());
         }
 
         final String project = "srcdeps-mvn-git-branch-quickstart";
@@ -222,18 +209,29 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
         srcdepsYaml = srcdepsYaml.replace(remoteGitUri, localGitRepoUri);
         Files.write(srcdepsYamlPath, srcdepsYaml.getBytes(StandardCharsets.UTF_8));
 
-        String hash_a84403b = null;
+        final String hashA84403b;
+        final Path hashA84403bPath;
         {
             final MavenExecution execution = verifier.forProject(workDir) //
-                    // .withCliOption("-X") //
+                    .withCliOption("-X") //
                     .withCliOption("-B") // batch
                     .withCliOptions("-Dmaven.repo.local=" + mvnLocalRepo.getRootDirectory().toAbsolutePath().toString()) //
                     .withCliOption("-s").withCliOption(mrmSettingsXmlPath)
+                    .withCliOption("-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn") //
                     .withCliOption(
                             "-Dorg.slf4j.simpleLogger.log.org.srcdeps.mvn.localrepo.SrcdepsLocalRepositoryManager=debug")
-                    .withCliOption("-Dorg.slf4j.simpleLogger.log.org.srcdeps.core.fs.PersistentBuildRefStore=debug");
+                    .withCliOption(
+                            "-Dorg.slf4j.simpleLogger.log.org.srcdeps.core.fs.PersistentBuildMetadataStore=debug");
             final WrappedMavenExecutionResult result = new WrappedMavenExecutionResult(
                     execution.execute("clean", "install"));
+
+            {
+                PersistentBuildMetadataStore.BuildRequestIdCollector consumer = new PersistentBuildMetadataStore.BuildRequestIdCollector();
+                buildMetadataStore.walkBuildRequestHashes(consumer);
+                Assert.assertEquals("found " + consumer.getHashes(), 1, consumer.getHashes().size());
+                hashA84403b = consumer.getHashes().iterator().next();
+                hashA84403bPath = buildMetadataStore.createBuildRequestIdPath(hashA84403b);
+            }
 
             result //
                     .assertErrorFreeLog() //
@@ -242,19 +240,20 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogText("srcdeps: attempting to clone version 0.0.1-SRC-branch-morning-branch from SCM URL "
                             + localGitRepoUri + "") //
                     .assertLogText(
-                            "Srcdeps mapped artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch to revision a84403b6fb44c5a588a9fe39d939c977e1e5c6a4") //
-                    .assertLogText("Srcdeps requires a rebuild of org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
+                            "srcdeps mapped artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch to revision a84403b6fb44c5a588a9fe39d939c977e1e5c6a4") //
+                    .assertLogTextPath("srcdeps commitId path " + hashA84403bPath + "/commitId does not exist") //
+                    .assertLogText("srcdeps requires a rebuild of org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
                             + "], triggered by org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch lookup") //
+                    .assertLogText("srcdeps will uninstall 0 GAVs before rebuilding them") //
+
+                    .assertLogTextPath("srcdeps path " + hashA84403bPath + "/commitId will point at commitId a84403b6fb44c5a588a9fe39d939c977e1e5c6a4") //
+                    .assertLogTextPath("srcdeps path " + hashA84403bPath + "/org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact_0.0.1-SRC-branch-morning-branch_pom will point at sha1") //
+                    .assertLogTextPath("srcdeps path " + hashA84403bPath + "/org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact_0.0.1-SRC-branch-morning-branch_jar will point at sha1") //
+                    .assertLogText("srcdeps installed 2 artifacts") //
+                    .assertLogText("srcdeps SCM repository org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
+                            + "] has been marked as built and up-to-date in this JVM. The artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:jar:0.0.1-SRC-branch-morning-branch must be there in the local maven repository") //
             ;
 
-            final Map<String, String> buildRefs = loadBuildRefs(basedir);
-            Assert.assertEquals("found " + buildRefs, 1, buildRefs.size());
-            hash_a84403b = buildRefs.keySet().iterator().next();
-            result.assertLogText("BuildRequestId path " + basedir + "/target/srcdeps/build-refs/" + hash_a84403b
-                    + " will point at commitId a84403b6fb44c5a588a9fe39d939c977e1e5c6a4") //
-                    .assertLogText("Srcdeps SCM repository org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
-                            + "] has been maked as built and up-to-date in this JVM. The artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:jar:0.0.1-SRC-branch-morning-branch must be there in the local maven repository") //
-            ;
         }
 
         repoVerifier.verify();
@@ -263,13 +262,15 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
         /* The second build: no branch rebuild should be needed */
         {
             final MavenExecution execution = verifier.forProject(workDir) //
-                    // .withCliOption("-X") //
+                    .withCliOption("-X") //
                     .withCliOption("-B") // batch
                     .withCliOptions("-Dmaven.repo.local=" + mvnLocalRepo.getRootDirectory().toAbsolutePath().toString()) //
                     .withCliOption("-s").withCliOption(mrmSettingsXmlPath)
+                    .withCliOption("-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn") //
                     .withCliOption(
                             "-Dorg.slf4j.simpleLogger.log.org.srcdeps.mvn.localrepo.SrcdepsLocalRepositoryManager=debug")
-                    .withCliOption("-Dorg.slf4j.simpleLogger.log.org.srcdeps.core.fs.PersistentBuildRefStore=debug");
+                    .withCliOption(
+                            "-Dorg.slf4j.simpleLogger.log.org.srcdeps.core.fs.PersistentBuildMetadataStore=debug");
             final WrappedMavenExecutionResult result = new WrappedMavenExecutionResult(
                     execution.execute("clean", "install"));
             result //
@@ -279,16 +280,14 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogText("srcdeps: attempting to fetch version 0.0.1-SRC-branch-morning-branch from SCM URL "
                             + localGitRepoUri + "") //
                     .assertLogText(
-                            "Srcdeps version 0.0.1-SRC-branch-morning-branch of org.l2x6.maven.srcdeps.itest currently at commit a84403b6fb44c5a588a9fe39d939c977e1e5c6a4 was built in the past; no need to build again") //
-                    .assertLogText("BuildRequestId path " + basedir + "/target/srcdeps/build-refs/" + hash_a84403b
-                            + " points at commitId a84403b6fb44c5a588a9fe39d939c977e1e5c6a4") //
+                            "srcdeps mapped artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch to revision a84403b6fb44c5a588a9fe39d939c977e1e5c6a4 via 0.0.1-SRC-branch-morning-branch") //
+                    .assertLogTextPath("srcdeps path " + hashA84403bPath + "/commitId points at commitId a84403b6fb44c5a588a9fe39d939c977e1e5c6a4") //
+                    .assertLogTextPath("srcdeps path " + hashA84403bPath + "/org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact_0.0.1-SRC-branch-morning-branch_pom points at sha1 bb7e07cbf984f98d12abaa4fee58577b032d537c") //
                     .assertLogText(
-                            "Srcdeps mapped artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch to revision a84403b6fb44c5a588a9fe39d939c977e1e5c6a4") //
-                    .assertLogText("Srcdeps SCM repository org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
-                            + "] has been maked as built and up-to-date in this JVM. The artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:jar:0.0.1-SRC-branch-morning-branch must be there in the local maven repository") //
+                            "srcdeps artifact in the local Maven repo has not changed since we built it in the past: org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch")
 
                     /* there should be no dependency rebuild in the second build */
-                    .assertNoLogText("Srcdeps requires a rebuild") //
+                    .assertNoLogText("srcdeps requires a rebuild") //
             ;
         }
         repoVerifier.verify();
@@ -312,11 +311,14 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .withCliOption("-B") // batch
                     .withCliOptions("-Dmaven.repo.local=" + mvnLocalRepo.getRootDirectory().toAbsolutePath().toString()) //
                     .withCliOption("-s").withCliOption(mrmSettingsXmlPath)
+                    .withCliOption("-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn") //
                     .withCliOption(
                             "-Dorg.slf4j.simpleLogger.log.org.srcdeps.mvn.localrepo.SrcdepsLocalRepositoryManager=debug")
-                    .withCliOption("-Dorg.slf4j.simpleLogger.log.org.srcdeps.core.fs.PersistentBuildRefStore=debug");
+                    .withCliOption(
+                            "-Dorg.slf4j.simpleLogger.log.org.srcdeps.core.fs.PersistentBuildMetadataStore=debug");
             final WrappedMavenExecutionResult result = new WrappedMavenExecutionResult(
                     execution.execute("clean", "install"));
+            Path commitIdPath = buildMetadataStore.createBuildRequestIdPath(hashA84403b).resolve("commitId");
             result //
                     .assertErrorFreeLog() //
                     .assertLogText("SrcdepsLocalRepositoryManager will decorate "
@@ -324,18 +326,22 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogText("srcdeps: attempting to fetch version 0.0.1-SRC-branch-morning-branch from SCM URL "
                             + localGitRepoUri + "") //
                     .assertLogText(
-                            "Srcdeps mapped artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch to revision "
+                            "srcdeps mapped artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch to revision "
                                     + expectedCommitId) //
-                    .assertLogText("BuildRequestId path " + basedir + "/target/srcdeps/build-refs/" + hash_a84403b
-                            + " points at commitId a84403b6fb44c5a588a9fe39d939c977e1e5c6a4") //
-                    .assertLogText("Srcdeps requires a rebuild of org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
+                    .assertLogTextPath("srcdeps path " + hashA84403bPath + "/commitId points at commitId a84403b6fb44c5a588a9fe39d939c977e1e5c6a4")
+                    .assertLogText("srcdeps requires a rebuild of org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
                             + "], triggered by org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch lookup")
-                    .assertLogText("BuildRequestId path " + basedir + "/target/srcdeps/build-refs/" + hash_a84403b
-                            + " will point at commitId " + expectedCommitId)
-                    .assertLogText("Srcdeps SCM repository org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
-                            + "] has been maked as built and up-to-date in this JVM. The artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:jar:0.0.1-SRC-branch-morning-branch must be there in the local maven repository")
+                    .assertLogText("srcdeps will uninstall 1 GAVs before rebuilding them")
+                    .assertLogTextPath("srcdeps uninstalls " + mvnLocalRepoPath
+                            + "/org/l2x6/maven/srcdeps/itest/srcdeps-test-artifact/0.0.1-SRC-branch-morning-branch")
+                    .assertLogTextPath("srcdeps path " + hashA84403bPath + "/commitId will point at commitId "
+                            + expectedCommitId)
+                    .assertLogTextPath("srcdeps path " + hashA84403bPath + "/org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact_0.0.1-SRC-branch-morning-branch_pom will point at sha1")
+                    .assertLogTextPath("srcdeps path " + hashA84403bPath + "/org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact_0.0.1-SRC-branch-morning-branch_jar will point at sha1")
+                    .assertLogText("srcdeps installed 2 artifacts")
 
-            ;
+                    .assertNoLogText(
+                            "srcdeps artifact in the local Maven repo has not changed since we built it in the past");
         }
         repoVerifier.verify();
         Files.move(workDir.toPath().resolve("log.txt"), workDir.toPath().resolve("log-3.txt"));
@@ -351,9 +357,11 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .withCliOption("-B") // batch
                     .withCliOptions("-Dmaven.repo.local=" + mvnLocalRepo.getRootDirectory().toAbsolutePath().toString()) //
                     .withCliOption("-s").withCliOption(mrmSettingsXmlPath)
+                    .withCliOption("-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn") //
                     .withCliOption(
                             "-Dorg.slf4j.simpleLogger.log.org.srcdeps.mvn.localrepo.SrcdepsLocalRepositoryManager=debug")
-                    .withCliOption("-Dorg.slf4j.simpleLogger.log.org.srcdeps.core.fs.PersistentBuildRefStore=debug");
+                    .withCliOption(
+                            "-Dorg.slf4j.simpleLogger.log.org.srcdeps.core.fs.PersistentBuildMetadataStore=debug");
             final WrappedMavenExecutionResult result = new WrappedMavenExecutionResult(
                     execution.execute("clean", "install"));
             result //
@@ -363,15 +371,24 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogText("srcdeps: attempting to fetch version 0.0.1-SRC-branch-morning-branch from SCM URL "
                             + localGitRepoUri + "") //
                     .assertLogText(
-                            "Srcdeps mapped artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch to revision a84403b6fb44c5a588a9fe39d939c977e1e5c6a4") //
-                    .assertLogText("BuildRequestId path " + basedir + "/target/srcdeps/build-refs/" + hash_a84403b
-                            + " points at commitId " + expectedCommitId) //
-                    .assertLogText("Srcdeps requires a rebuild of org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
+                            "srcdeps mapped artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch to revision a84403b6fb44c5a588a9fe39d939c977e1e5c6a4") //
+
+                    .assertLogTextPath("srcdeps path " + hashA84403bPath + "/commitId points at commitId "
+                            + expectedCommitId)
+                    .assertLogText("srcdeps requires a rebuild of org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
                             + "], triggered by org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch lookup")
-                    .assertLogText("BuildRequestId path " + basedir + "/target/srcdeps/build-refs/" + hash_a84403b
-                            + " will point at commitId a84403b6fb44c5a588a9fe39d939c977e1e5c6a4")
-                    .assertLogText("Srcdeps SCM repository org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
-                            + "] has been maked as built and up-to-date in this JVM. The artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:jar:0.0.1-SRC-branch-morning-branch must be there in the local maven repository");
+                    .assertLogText("srcdeps will uninstall 1 GAVs before rebuilding them")
+                    .assertLogTextPath("srcdeps uninstalls " + mvnLocalRepoPath
+                            + "/org/l2x6/maven/srcdeps/itest/srcdeps-test-artifact/0.0.1-SRC-branch-morning-branch")
+                    .assertLogTextPath("srcdeps path " + hashA84403bPath + "/commitId will point at commitId a84403b6fb44c5a588a9fe39d939c977e1e5c6a4")
+                    .assertLogTextPath("srcdeps path " + hashA84403bPath + "/org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact_0.0.1-SRC-branch-morning-branch_pom will point at sha1")
+                    .assertLogTextPath("srcdeps path " + hashA84403bPath + "/org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact_0.0.1-SRC-branch-morning-branch_jar will point at sha1")
+                    .assertLogText("srcdeps installed 2 artifacts")
+                    .assertLogText("srcdeps SCM repository org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
+                            + "] has been marked as built and up-to-date in this JVM. The artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:jar:0.0.1-SRC-branch-morning-branch must be there in the local maven repository")
+                    .assertNoLogText(
+                            "srcdeps artifact in the local Maven repo has not changed since we built it in the past") //
+            ;
         }
         repoVerifier.verify();
     }
@@ -456,6 +473,15 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
 
     @Test
     public void mvnGitSnapshotRevision() throws Exception {
+        SrcdepsCoreUtils.deleteDirectory(basedir.resolve("target/srcdeps"));
+
+        PersistentBuildMetadataStore buildMetadataStore = new PersistentBuildMetadataStore(srcdepsBuildMetadataPath);
+        {
+            PersistentBuildMetadataStore.BuildRequestIdCollector consumer = new PersistentBuildMetadataStore.BuildRequestIdCollector();
+            buildMetadataStore.walkBuildRequestHashes(consumer);
+            Assert.assertEquals("found " + consumer.getHashes(), 0, consumer.getHashes().size());
+        }
+
         final String project = "srcdeps-mvn-git-snapshot-quickstart";
         final String depVersion = "0.0.2-SNAPSHOT";
         final String srcVersion = "0.0.2-SRC-revision-67e9a1480f6de434e513c3ced2b4e952dce5ddc0";
@@ -470,39 +496,125 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                 pomJar(ORG_L2X6_MAVEN_SRCDEPS_ITEST_GROUPID, "srcdeps-test-artifact-api", srcVersion), //
                 pomJar(ORG_L2X6_MAVEN_SRCDEPS_ITEST_GROUPID, "srcdeps-test-artifact-service", srcVersion) //
         };
+        /* this copies the test project to target/test-projects */
+        final File workDir = resources.getBasedir(project);
+        final Gavtc serviceGavts = new Gavtc(ORG_L2X6_MAVEN_SRCDEPS_ITEST_GROUPID, "srcdeps-test-artifact-service",
+                depVersion, "jar");
+
+        final String hash67e9a14;
+        final Path hash67e9a14Path;
         /* The first build: the snapshots will be removed before building */
-
-        assertBuild(project, expectedGavtcs, unexpectedGavtcs, "clean", "install");
-
-        final Gavtc serviceGavts = new Gavtc(ORG_L2X6_MAVEN_SRCDEPS_ITEST_GROUPID, "srcdeps-test-artifact-service", depVersion, "jar");
         {
+            LocalMavenRepoVerifier repoVerifier = new LocalMavenRepoVerifier(project, expectedGavtcs, unexpectedGavtcs);
+            repoVerifier.clean();
+
+            final String quickstartRepoDir = "org/l2x6/srcdeps/quickstarts/" + project;
+            SrcdepsCoreUtils.deleteDirectory(mvnLocalRepoPath.resolve(quickstartRepoDir));
+
+            MavenExecution execution = verifier.forProject(workDir) //
+                    .withCliOption("-X") //
+                    .withCliOption("-B") // batch
+                    .withCliOption("-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn") //
+                    .withCliOptions("-Dmaven.repo.local=" + mvnLocalRepo.getRootDirectory().toAbsolutePath().toString()) //
+                    .withCliOption("-s").withCliOption(mrmSettingsXmlPath);
+            WrappedMavenExecutionResult result = new WrappedMavenExecutionResult(execution.execute("clean", "install"));
+
+            {
+                PersistentBuildMetadataStore.BuildRequestIdCollector consumer = new PersistentBuildMetadataStore.BuildRequestIdCollector();
+                buildMetadataStore.walkBuildRequestHashes(consumer);
+                Assert.assertEquals("found " + consumer.getHashes(), 1, consumer.getHashes().size());
+                hash67e9a14 = consumer.getHashes().iterator().next();
+                hash67e9a14Path = buildMetadataStore.createBuildRequestIdPath(hash67e9a14);
+            }
+
+            result //
+                    .assertErrorFreeLog() //
+                    .assertLogText("SrcdepsLocalRepositoryManager will decorate "
+                            + TakariLocalRepositoryManagerFactory.class.getName()) //
+                    .assertLogText("SrcdepsLocalRepositoryManager will decorate "
+                            + TakariLocalRepositoryManagerFactory.class.getName()) //
+                    .assertLogText(
+                            "srcdeps: attempting to clone version revision-67e9a1480f6de434e513c3ced2b4e952dce5ddc0 from SCM URL https://github.com/srcdeps/srcdeps-test-artifact.git")
+                    .assertLogText(
+                            "srcdeps mapped artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:pom:0.0.2-SNAPSHOT to revision 67e9a1480f6de434e513c3ced2b4e952dce5ddc0 via revision-67e9a1480f6de434e513c3ced2b4e952dce5ddc0")
+                    .assertLogText(
+                            "srcdeps adds SCM repo to FetchLog: org.l2x6.maven.srcdeps.itest:[git:https://github.com/srcdeps/srcdeps-test-artifact.git]")
+                    .assertLogText("srcdeps commitId path " + hash67e9a14Path + "/commitId does not exist")
+                    .assertLogText(
+                            "srcdeps requires a rebuild of org.l2x6.maven.srcdeps.itest:[git:https://github.com/srcdeps/srcdeps-test-artifact.git], triggered by org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:pom:0.0.2-SNAPSHOT lookup")
+                    .assertLogText("srcdeps will uninstall 0 GAVs before rebuilding them")
+                    .assertLogTextPath("srcdeps path " + hash67e9a14Path + "/commitId will point at commitId 67e9a1480f6de434e513c3ced2b4e952dce5ddc0")
+                    .assertLogTextPath("srcdeps path " + hash67e9a14Path + "/org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact_0.0.2-SNAPSHOT_pom will point at sha1 ")
+                    .assertLogTextPath("srcdeps path " + hash67e9a14Path + "/org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact-api_0.0.2-SNAPSHOT_pom will point at sha1 ")
+                    .assertLogTextPath("srcdeps path " + hash67e9a14Path + "/org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact-api_0.0.2-SNAPSHOT_jar will point at sha1 ")
+                    .assertLogTextPath("srcdeps path " + hash67e9a14Path + "/org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact-service_0.0.2-SNAPSHOT_pom will point at sha1 ")
+                    .assertLogTextPath("srcdeps path " + hash67e9a14Path + "/org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact-service_0.0.2-SNAPSHOT_jar will point at sha1 ")
+                    .assertLogText("srcdeps installed 5 artifacts");
+
+            repoVerifier.verify();
             final Manifest manifest = loadManifest(serviceGavts);
             Assert.assertNotNull(manifest);
-            Assert.assertEquals("67e9a1480f6de434e513c3ced2b4e952dce5ddc0", manifest.getMainAttributes().getValue("Built-From-Git-SHA1"));
+            Assert.assertEquals("67e9a1480f6de434e513c3ced2b4e952dce5ddc0",
+                    manifest.getMainAttributes().getValue("Built-From-Git-SHA1"));
         }
 
-        /* The second build: malform one of the dependency artifacts and try to rebuid.
-         * A success will prove that the dependency artifact got rebuilt */
+        Files.move(workDir.toPath().resolve("log.txt"), workDir.toPath().resolve("log-1.txt"));
+
+        /*
+         * The second build: malform one of the dependency artifacts and try to rebuid. A success will prove that the
+         * dependency artifact got rebuilt
+         */
         Path serviceJarPath = mvnLocalRepo.resolve(serviceGavts);
         try (OutputStream in = Files.newOutputStream(serviceJarPath)) {
             in.write(42);
         }
-
-        LocalMavenRepoVerifier repoVerifier = new LocalMavenRepoVerifier(project, expectedGavtcs, unexpectedGavtcs);
-
-        WrappedMavenExecutionResult result = build(project, "clean", "install");
-        result //
-                .assertErrorFreeLog() //
-                .assertLogText("SrcdepsLocalRepositoryManager will decorate "
-                        + TakariLocalRepositoryManagerFactory.class.getName()) //
-        ;
-
-        repoVerifier.verify();
         {
+            LocalMavenRepoVerifier repoVerifier = new LocalMavenRepoVerifier(project, expectedGavtcs, unexpectedGavtcs);
+
+            MavenExecution execution = verifier.forProject(workDir) //
+                    .withCliOption("-X") //
+                    .withCliOption("-B") // batch
+                    .withCliOption("-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn") //
+                    .withCliOptions("-Dmaven.repo.local=" + mvnLocalRepo.getRootDirectory().toAbsolutePath().toString()) //
+                    .withCliOption("-s").withCliOption(mrmSettingsXmlPath);
+            WrappedMavenExecutionResult result = new WrappedMavenExecutionResult(execution.execute("clean", "install"));
+            result //
+                    .assertErrorFreeLog() //
+                    .assertLogText("SrcdepsLocalRepositoryManager will decorate "
+                            + TakariLocalRepositoryManagerFactory.class.getName()) //
+                    .assertLogText(
+                            "srcdeps: attempting to fetch version revision-67e9a1480f6de434e513c3ced2b4e952dce5ddc0 from SCM URL https://github.com/srcdeps/srcdeps-test-artifact.git")
+                    .assertLogText(
+                            "srcdeps mapped artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:pom:0.0.2-SNAPSHOT to revision 67e9a1480f6de434e513c3ced2b4e952dce5ddc0 via revision-67e9a1480f6de434e513c3ced2b4e952dce5ddc0")
+                    .assertLogText(
+                            "srcdeps adds SCM repo to FetchLog: org.l2x6.maven.srcdeps.itest:[git:https://github.com/srcdeps/srcdeps-test-artifact.git]")
+                    .assertLogTextPath("srcdeps path " + hash67e9a14Path + "/commitId points at commitId 67e9a1480f6de434e513c3ced2b4e952dce5ddc0")
+                    .assertLogText(
+                            "srcdeps will rebuild, sha1 of artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:0.0.2-SNAPSHOT:jar in local Maven repository differs from last known sha1 built by srcdeps")
+                    .assertLogText(
+                            "srcdeps requires a rebuild of org.l2x6.maven.srcdeps.itest:[git:https://github.com/srcdeps/srcdeps-test-artifact.git], triggered by org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:pom:0.0.2-SNAPSHOT lookup")
+                    .assertLogText("srcdeps will uninstall 3 GAVs before rebuilding them")
+                    .assertLogTextPath("srcdeps uninstalls " + mvnLocalRepoPath
+                            + "/org/l2x6/maven/srcdeps/itest/srcdeps-test-artifact-api/0.0.2-SNAPSHOT")
+                    .assertLogTextPath("srcdeps uninstalls " + mvnLocalRepoPath
+                            + "/org/l2x6/maven/srcdeps/itest/srcdeps-test-artifact-service/0.0.2-SNAPSHOT")
+                    .assertLogTextPath("srcdeps uninstalls " + mvnLocalRepoPath
+                            + "/org/l2x6/maven/srcdeps/itest/srcdeps-test-artifact/0.0.2-SNAPSHOT")
+                    .assertLogTextPath("srcdeps path " + hash67e9a14Path + "/commitId will point at commitId 67e9a1480f6de434e513c3ced2b4e952dce5ddc0")
+                    .assertLogTextPath("srcdeps path " + hash67e9a14Path + "/org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact_0.0.2-SNAPSHOT_pom will point at sha1")
+                    .assertLogTextPath("srcdeps path " + hash67e9a14Path + "/org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact-api_0.0.2-SNAPSHOT_pom will point at sha1")
+                    .assertLogTextPath("srcdeps path " + hash67e9a14Path + "/org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact-api_0.0.2-SNAPSHOT_jar will point at sha1")
+                    .assertLogTextPath("srcdeps path " + hash67e9a14Path + "/org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact-service_0.0.2-SNAPSHOT_pom will point at sha1")
+                    .assertLogTextPath("srcdeps path " + hash67e9a14Path + "/org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact-service_0.0.2-SNAPSHOT_jar will point at sha1")
+                    .assertLogText("srcdeps installed 5 artifacts");
+
+            repoVerifier.verify();
             final Manifest manifest = loadManifest(serviceGavts);
             Assert.assertNotNull(manifest);
-            Assert.assertEquals("67e9a1480f6de434e513c3ced2b4e952dce5ddc0", manifest.getMainAttributes().getValue("Built-From-Git-SHA1"));
+            Assert.assertEquals("67e9a1480f6de434e513c3ced2b4e952dce5ddc0",
+                    manifest.getMainAttributes().getValue("Built-From-Git-SHA1"));
         }
+        Files.move(workDir.toPath().resolve("log.txt"), workDir.toPath().resolve("log-2.txt"));
 
     }
 

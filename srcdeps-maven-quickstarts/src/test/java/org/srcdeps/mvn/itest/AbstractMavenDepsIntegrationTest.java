@@ -99,12 +99,14 @@ public abstract class AbstractMavenDepsIntegrationTest {
     protected static final String QUICKSTART_VERSION = "1.0-SNAPSHOT";
     protected static final Pattern replacementPattern = Pattern
             .compile(Pattern.quote("<version>") + "[^<]+" + Pattern.quote("</version><!-- @srcdeps.version@ -->"));
+    protected static final Path srcdepsBuildMetadataPath;
 
     protected static final Path srcdepsQuickstartsPath;
 
     static {
         srcdepsQuickstartsPath = basedir.resolve("../srcdeps-maven-quickstarts").normalize();
         mvnLocalRepoPath = basedir.resolve("target/mvn-local-repo");
+        srcdepsBuildMetadataPath = basedir.resolve("target/srcdeps/build-metadata");
         mvnLocalRepo = new MavenLocalRepository(mvnLocalRepoPath);
     }
 
@@ -204,8 +206,9 @@ public abstract class AbstractMavenDepsIntegrationTest {
         SrcdepsCoreUtils.deleteDirectory(mvnLocalRepoPath.resolve(quickstartRepoDir));
 
         MavenExecution execution = verifier.forProject(resources.getBasedir(project)) //
-                // .withCliOption("-X") //
+                .withCliOption("-X") //
                 .withCliOption("-B") // batch
+                .withCliOption("-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn") //
                 .withCliOptions("-Dmaven.repo.local=" + mvnLocalRepo.getRootDirectory().toAbsolutePath().toString()) //
                 .withCliOption("-s").withCliOption(mrmSettingsXmlPath);
         return new WrappedMavenExecutionResult(execution.execute(goals));
