@@ -18,9 +18,14 @@ package org.srcdeps.mvn.itest;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
+import java.nio.file.FileSystemException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.jar.JarInputStream;
@@ -89,7 +94,9 @@ public abstract class AbstractMavenDepsIntegrationTest {
 
     }
     protected static final Path basedir = Paths.get(System.getProperty("basedir", new File("").getAbsolutePath()));
+    private static final long DELETE_RETRY_MILLIS = 5000L;
     protected static final String encoding = System.getProperty("project.build.sourceEncoding");
+    protected static final boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");
     private static final Logger log = LoggerFactory.getLogger(AbstractMavenDepsIntegrationTest.class);
     protected static final String mrmSettingsXmlPath = System.getProperty("mrm.settings.xml");
     protected static final MavenLocalRepository mvnLocalRepo;
@@ -121,8 +128,78 @@ public abstract class AbstractMavenDepsIntegrationTest {
 
     @BeforeClass
     public static void beforeClass() throws IOException {
+        final Path dir = mvnLocalRepo.getRootDirectory();
+        final Path takariLocalRepoDir = dir.resolve("io/takari");
+        if (Files.exists(dir)) {
+            try (DirectoryStream<Path> subPaths = Files.newDirectoryStream(dir)) {
+                for (Path subPath : subPaths) {
+                    if (Files.isDirectory(subPath)) {
+                        Files.walkFileTree(subPath, new SimpleFileVisitor<Path>() {
 
-        SrcdepsCoreUtils.ensureDirectoryExistsAndEmpty(mvnLocalRepo.getRootDirectory());
+                            @Override
+                            public FileVisitResult postVisitDirectory(Path d, IOException exc) throws IOException {
+                                if (exc == null) {
+                                    final FileVisitResult result;
+                                    if (!takariLocalRepoDir.startsWith(d)) {
+                                        Files.delete(d);
+                                        result = FileVisitResult.CONTINUE;
+                                    } else if (takariLocalRepoDir.equals(d)) {
+                                        result = FileVisitResult.SKIP_SUBTREE;
+                                    } else {
+                                        result = FileVisitResult.CONTINUE;
+                                    }
+                                    return result;
+                                } else {
+                                    // directory iteration failed; propagate exception
+                                    throw exc;
+                                }
+                            }
+
+                            @Override
+                            public FileVisitResult preVisitDirectory(Path d, BasicFileAttributes attrs)
+                                    throws IOException {
+                                final FileVisitResult result = d.equals(takariLocalRepoDir) ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
+                                return result ;
+                            }
+
+                            @Override
+                            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                                if (isWindows) {
+                                    final long deadline = System.currentTimeMillis() + DELETE_RETRY_MILLIS;
+                                    FileSystemException lastException = null;
+                                    do {
+                                        try {
+                                            Files.delete(file);
+                                            return FileVisitResult.CONTINUE;
+                                        } catch (FileSystemException e) {
+                                            lastException = e;
+                                        }
+                                    } while (System.currentTimeMillis() < deadline);
+                                    throw new IOException(String.format("Could not delete file [%s] after retrying for %d ms", file,
+                                            DELETE_RETRY_MILLIS), lastException);
+                                } else {
+                                    Files.delete(file);
+                                }
+                                return FileVisitResult.CONTINUE;
+                            }
+
+                            @Override
+                            public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+                                // try to delete the file anyway, even if its attributes
+                                // could not be read, since delete-only access is
+                                // theoretically possible
+                                Files.delete(file);
+                                return FileVisitResult.CONTINUE;
+                            }
+                        });
+                    } else {
+                        Files.delete(subPath);
+                    }
+                }
+            }
+        } else {
+            SrcdepsCoreUtils.ensureDirectoryExists(dir);
+        }
 
         System.setProperty(Maven.getSrcdepsMavenSettingsProperty(), mrmSettingsXmlPath);
 
@@ -179,7 +256,6 @@ public abstract class AbstractMavenDepsIntegrationTest {
     public AbstractMavenDepsIntegrationTest(MavenRuntimeBuilder runtimeBuilder) throws IOException, Exception {
         this.verifier = runtimeBuilder.withExtension(new File("target/classes").getCanonicalFile()).build();
     }
-
 
     protected WrappedMavenExecutionResult assertBuild(String project, String[] gavtcPatternsExpectedToExist,
             String[] gavtcPatternsExpectedNotToExist, String... goals) throws Exception {
