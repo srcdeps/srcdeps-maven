@@ -20,9 +20,9 @@ environment:
 install:
   - cmd: SET PATH=C:\Users\appveyor\.m2\wrapper\dists\apache-maven-3.5.3-bin\2c22a6s60afpuloj4v181qvild\apache-maven-3.5.3\bin;%JAVA_HOME%\bin;%PATH%
 build_script:
-  - .\mvnw.cmd clean install -B -Dhttps.protocols=TLSv1.1,TLSv1.2 -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
+  - .\mvnw.cmd clean install -B -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn
 on_failure:
   - echo "failed"
-  - type srcdeps-maven-quickstarts\target\test-projects\SrcdepsLocalRepositoryManagerTest_mvnGitInterdepModules[3.3.1]_srcdeps-mvn-git-interdep-modules-quickstart\log.txt
+#  - type C:\projects\srcdeps-maven\srcdeps-maven-quickstarts\target\test-projects\MavenDepsMavenIntegrationTest_mvnGitSnapshotRevision[3.5.3]_srcdeps-mvn-git-snapshot-quickstart\log.txt
 cache:
   - C:\Users\appveyor\.m2\wrapper
