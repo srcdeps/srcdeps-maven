@@ -196,6 +196,7 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                         delegate.getRepository().getBasedir().getAbsolutePath());
 
                 BuildRequest buildRequest = BuildRequest.builder() //
+                        .scmRepositoryId(scmRepo.getId()) //
                         .dependentProjectRootDirectory(configurationProducer.getMultimoduleProjectRootDirectory()) //
                         .projectRootDirectory(projectBuildDir.getPath()) //
                         .scmUrls(scmRepo.getUrls()) //

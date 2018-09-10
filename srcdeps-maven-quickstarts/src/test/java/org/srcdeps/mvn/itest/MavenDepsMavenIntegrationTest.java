@@ -603,7 +603,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogText(
                             "srcdeps mapped artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:pom:0.0.2-SNAPSHOT to revision 67e9a1480f6de434e513c3ced2b4e952dce5ddc0 via revision-67e9a1480f6de434e513c3ced2b4e952dce5ddc0")
                     .assertLogText(
-                            "srcdeps: Adding SCM repo to FetchLog: org.l2x6.maven.srcdeps.itest:[git:https://github.com/srcdeps/srcdeps-test-artifact.git]")
+                            "srcdeps: Adding SCM repo to FetchLog: [org.l2x6.maven.srcdeps.itest:[git:https://github.com/srcdeps/srcdeps-test-artifact.git]]")
                     .assertLogText(
                             "srcdeps: commitId path [" + hash67e9a14Path + File.separator + "commitId] does not exist")
                     .assertLogText(
@@ -660,11 +660,11 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogText(
                             "srcdeps mapped artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:pom:0.0.2-SNAPSHOT to revision 67e9a1480f6de434e513c3ced2b4e952dce5ddc0 via revision-67e9a1480f6de434e513c3ced2b4e952dce5ddc0")
                     .assertLogText(
-                            "srcdeps: Adding SCM repo to FetchLog: org.l2x6.maven.srcdeps.itest:[git:https://github.com/srcdeps/srcdeps-test-artifact.git]")
+                            "srcdeps: Adding SCM repo to FetchLog: [org.l2x6.maven.srcdeps.itest:[git:https://github.com/srcdeps/srcdeps-test-artifact.git]]")
                     .assertLogTextPath("srcdeps: Path [" + hash67e9a14Path + File.separator
                             + "commitId] points at commitId [67e9a1480f6de434e513c3ced2b4e952dce5ddc0]")
                     .assertLogText(
-                            "srcdeps: Rebuilding: sha1 of artifact org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:0.0.2-SNAPSHOT:jar in local Maven repository differs from last known sha1 built by srcdeps")
+                            "srcdeps: Rebuilding: sha1 of artifact [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:0.0.2-SNAPSHOT:jar] in local Maven repository differs from last known sha1 built by srcdeps")
                     .assertLogText(
                             "srcdeps requires a rebuild of org.l2x6.maven.srcdeps.itest:[git:https://github.com/srcdeps/srcdeps-test-artifact.git], triggered by org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:pom:0.0.2-SNAPSHOT lookup")
                     .assertLogText("srcdeps will uninstall 3 GAVs before rebuilding them")
