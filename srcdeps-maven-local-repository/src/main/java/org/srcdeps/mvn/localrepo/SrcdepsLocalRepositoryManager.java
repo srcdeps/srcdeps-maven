@@ -76,14 +76,14 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
         for (String arg : buildArguments) {
             if (arg.startsWith("-Dmaven.repo.local=")) {
                 /* We won't touch maven.repo.local set in the user's config */
-                log.debug("Srcdeps forwards {} to the nested build as set in {}", arg, configurationLocation);
+                log.debug("srcdeps: Forwarding [{}] to the nested build as set in [{}]", arg, configurationLocation);
                 return buildArguments;
             }
             result.add(arg);
         }
 
         String arg = "-Dmaven.repo.local=" + localRepo;
-        log.debug("Srcdeps forwards {} from the outer Maven build to the nested build", arg);
+        log.debug("srcdeps: Forwarding [{}] from the outer Maven build to the nested build", arg);
         result.add(arg);
 
         return Collections.unmodifiableList(result);
@@ -93,7 +93,7 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
         final GavSetWalker.GavPathCollector paths = new GavSetWalker.GavPathCollector();
         gavSetWalker.walk(paths);
         final Map<Path, Gav> gavPaths = paths.getGavPaths();
-        log.debug("srcdeps will uninstall {} GAVs before rebuilding them", gavPaths.size());
+        log.debug("srcdeps: Uninstalling [{}] GAVs before rebuilding them", gavPaths.size());
         final List<ScmRepository> repos = configuration.getRepositories();
         for (Entry<Path, Gav> en : gavPaths.entrySet()) {
             final Path gavDir = en.getKey();
@@ -102,12 +102,12 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                 if (currentRepo != repo) {
                     if (repo.getGavSet().contains(gav.getGroupId(), gav.getArtifactId(), gav.getVersion())) {
                         log.error(
-                                "srcdeps cannot rebuild SCM repository {} because it includes artifact {} that is included by another SCM repository {}. Adjust includes/excludes of those repositories in srcdeps.yaml and retry",
+                                "srcdeps: Cannot rebuild SCM repository [{}] because it includes artifact [{}] that is included by another SCM repository [{}]. Adjust includes/excludes of those repositories in srcdeps.yaml and retry",
                                 currentRepo.getId(), gav.toString(), repo.getId());
                     }
                 }
             }
-            log.debug("srcdeps uninstalls {}", gavDir);
+            log.debug("srcdeps: Uninstalling [{}]", gavDir);
             SrcdepsCoreUtils.deleteDirectory(gavDir);
         }
     }
@@ -166,10 +166,12 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
         final FetchId fetchId = new FetchId(scmRepo.getId(), scmRepo.getUrls());
         if (fetchLog.contains(fetchId)) {
             log.debug(
-                    "srcdeps SCM repository {} has been marked as built and up-to-date in this JVM. The artifact {} must be there in the local maven repository",
+                    "srcdeps: SCM repository [{}] has been marked as built and up-to-date in this JVM. The artifact [{}] must be there in the local maven repository",
                     fetchId, artifact);
             return result;
         }
+
+        String scmRepoId = null;
 
         try (PathLock projectBuildDir = buildDirectoriesManager.openBuildDirectory(scmRepo.getIdAsPath(), srcVersion)) {
 
@@ -178,7 +180,7 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
             final String version = artifact.getVersion();
             if (fetchLog.contains(fetchId)) {
                 log.debug(
-                        "srcdeps SCM repository {} has been marked as built and up-to-date in this JVM. The artifact {} must be there in the local maven repository",
+                        "srcdeps: SCM repository [{}] has been marked as built and up-to-date in this JVM. The artifact [{}] must be there in the local maven repository",
                         fetchId, artifact);
                 return result2;
             } else {
@@ -194,7 +196,7 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                 List<String> buildArgs = enhanceBuildArguments(scmRepo.getBuildArguments(),
                         configurationProducer.getConfigurationLocation(),
                         delegate.getRepository().getBasedir().getAbsolutePath());
-
+                scmRepoId = scmRepo.getId();
                 BuildRequest buildRequest = BuildRequest.builder() //
                         .scmRepositoryId(scmRepo.getId()) //
                         .dependentProjectRootDirectory(configurationProducer.getMultimoduleProjectRootDirectory()) //
@@ -215,7 +217,7 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
 
                 final String buildRequestHash = buildRequest.getHash();
                 final String sourceTreeCommitId = scmService.checkout(buildRequest);
-                log.info("srcdeps mapped artifact {} to revision {} via {}", artifact, sourceTreeCommitId, srcVersion);
+                log.info("srcdeps: Mapped artifact [{}] to revision [{}] via [{}]", artifact, sourceTreeCommitId, srcVersion);
                 fetchLog.add(fetchId);
 
                 final String pastCommitId = buildMetadataStore.retrieveCommitId(buildRequestHash);
@@ -233,14 +235,14 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                          * there is no need to rebuild it
                          */
                         log.info(
-                                "srcdeps artifact in the local Maven repo has not changed since we built it in the past: {}",
+                                "srcdeps: The artifact in the local Maven repo has not changed since we built it in the past: [{}]",
                                 artifact);
                         return result2;
                     }
                 }
 
                 /* We need to rebuild from sources for whatever reason */
-                log.debug("srcdeps requires a rebuild of {}, triggered by {} lookup", fetchId, artifact);
+                log.debug("srcdeps: A rebuild of [{}] was triggered by [{}] lookup", fetchId, artifact);
                 /* Uninstall all matching artifacts */
                 uninstallGavSet(scmRepo, gavSetWalker);
 
@@ -250,20 +252,20 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                 BuildMetadataStore.StoreSha1Consumer gavtcPathConsumer = buildMetadataStore
                         .createStoreSha1Consumer(buildRequestHash);
                 gavSetWalker.walk(gavtcPathConsumer);
-                log.debug("srcdeps installed {} artifacts", gavtcPathConsumer.getCount());
+                log.debug("srcdeps: Installed [{}] artifacts", gavtcPathConsumer.getCount());
 
                 /* check once again if the delegate sees the newly built artifact */
                 final LocalArtifactResult newResult = delegate.find(session, request);
                 if (!newResult.isAvailable()) {
                     log.error(
-                            "srcdeps build succeeded but the artifact {} is still not available in the local repository",
+                            "srcdeps: Build succeeded but the artifact {} is still not available in the local repository",
                             artifact);
                 }
                 return newResult;
             }
 
         } catch (BuildException | IOException e) {
-            log.error("Srcdeps could not build " + request, e);
+            log.error("srcdeps: Could not build ["+ scmRepoId +"] using request [" + request + "]", e);
         }
         return result;
     }
@@ -278,7 +280,7 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
     @Override
     public LocalArtifactResult find(RepositorySystemSession session, LocalArtifactRequest request) {
         Artifact artifact = request.getArtifact();
-        log.trace("Srcdeps looking up locally {}", artifact);
+        log.trace("srcdeps: Looking up locally [{}]", artifact);
         final LocalArtifactResult result = delegate.find(session, request);
 
         final String version = artifact.getVersion();
@@ -287,12 +289,12 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
             final SrcVersion srcVersion = SrcVersion.parse(version);
             if (srcVersion.isImmutable() && result.isAvailable()) {
                 /* Only tags and revisions do not need to get rebuilt once there in the local repo */
-                log.debug("Srcdeps found {} in the local maven repository; no need to rebuild", request.getArtifact());
+                log.debug("srcdeps: Found [{}] in the local maven repository; no need to rebuild", request.getArtifact());
                 return result;
             }
 
             if (configuration.isSkip()) {
-                log.debug("Srcdeps is configured to be skipped");
+                log.debug("srcdeps: srcdeps is configured to be skipped");
             } else {
                 final ScmRepository scmRepo = configurationQueryService
                         .findScmRepo(artifact.getGroupId(), artifact.getArtifactId(), version).assertSuccess()
@@ -307,7 +309,7 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
             if (queryResult.getRepository() != null && queryResult.matchesBuildVersionPattern()) {
                 /* A source dependency defined in srcdeps.yaml */
                 if (configuration.isSkip()) {
-                    log.debug("Srcdeps is configured to be skipped");
+                    log.debug("srcdeps: srcdeps is configured to be skipped");
                 } else {
                     final ScmRepository scmRepo = queryResult.getRepository();
                     return buildDependency(artifact, scmRepo, result, scmRepo.getBuildRef(), session, request);

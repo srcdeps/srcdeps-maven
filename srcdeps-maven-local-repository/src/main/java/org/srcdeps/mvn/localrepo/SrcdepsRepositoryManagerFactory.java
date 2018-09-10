@@ -106,18 +106,18 @@ public class SrcdepsRepositoryManagerFactory implements LocalRepositoryManagerFa
      */
     private LocalRepositoryManagerFactory lookupDelegate() {
         Map<String, LocalRepositoryManagerFactory> factoryImpls = factories.get();
-        log.debug("SrcdepsRepositoryManagerFactory got {} LocalRepositoryManagerFactory instances",
+        log.debug("srcdeps: SrcdepsRepositoryManagerFactory got [{}] LocalRepositoryManagerFactory instances",
                 factoryImpls.size());
 
         for (Entry<String, LocalRepositoryManagerFactory> en : factoryImpls.entrySet()) {
             LocalRepositoryManagerFactory factory = en.getValue();
 
-            log.debug("SrcdepsRepositoryManagerFactory iterating over LocalRepositoryManagerFactory {}: {}",
+            log.debug("srcdeps: rcdepsRepositoryManagerFactory iterating over LocalRepositoryManagerFactory [{}]: [{}]",
                     en.getKey(), factory.getClass().getName());
 
             String factoryClassName = factory.getClass().getName();
             if (factoryClassName.equals(preferedDelegateFactoryName)) {
-                log.info("SrcdepsLocalRepositoryManager will decorate {}", factoryClassName);
+                log.info("srcdeps: SrcdepsLocalRepositoryManager will decorate [{}]", factoryClassName);
                 return factory;
             }
         }
@@ -143,7 +143,7 @@ public class SrcdepsRepositoryManagerFactory implements LocalRepositoryManagerFa
             throws NoLocalRepositoryManagerException {
         LocalRepositoryManagerFactory delegate = lookupDelegate();
 
-        log.debug("Creating a new SrcdepsLocalRepositoryManager");
+        log.debug("srcdeps: Creating a new SrcdepsLocalRepositoryManager");
         return new SrcdepsLocalRepositoryManager(delegate.newInstance(session, repository), buildService, scmService,
                 pathLocker, configurationProducer);
     }
