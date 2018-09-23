@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2017 Maven Source Dependencies
+ * Copyright 2015-2018 Maven Source Dependencies
  * Plugin contributors as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -68,7 +68,7 @@ public class ConfigurationProducer {
 
         final Configuration.Builder configBuilder;
         if (Files.exists(srcdepsYamlPath)) {
-            log.debug("SrcdepsLocalRepositoryManager using configuration {}", configurationLocation);
+            log.debug("srcdeps: Using configuration [{}]", configurationLocation);
             final String encoding = System.getProperty(Configuration.getSrcdepsEncodingProperty(), "utf-8");
             final Charset cs = Charset.forName(encoding);
             try (Reader r = Files.newBufferedReader(configurationLocation, cs)) {
@@ -78,7 +78,7 @@ public class ConfigurationProducer {
             }
         } else {
             log.warn(
-                    "Could not locate srcdeps configuration at neither {} nor {}, defaulting to an empty configuration",
+                    "srcdeps: Could not locate srcdeps configuration at neither [{}] nor [{}], defaulting to an empty configuration",
                     defaultSrcdepsYamlPath, legacySrcdepsYamlPath);
             configBuilder = Configuration.builder();
         }

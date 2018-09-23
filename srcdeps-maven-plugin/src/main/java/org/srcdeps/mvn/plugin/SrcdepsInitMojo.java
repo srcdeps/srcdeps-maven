@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2017 Maven Source Dependencies
+ * Copyright 2015-2018 Maven Source Dependencies
  * Plugin contributors as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -173,7 +173,7 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
             private static List<Element> append(MavenProject project, List<Element> ancestryPath) {
                 Scm scm = project.getScm();
                 if (scm == null) {
-                    log.debug("No SCM in project [{}:{}:{}]", project.getGroupId(), project.getArtifactId(),
+                    log.debug("srcdeps: No SCM in project [{}:{}:{}]", project.getGroupId(), project.getArtifactId(),
                             project.getVersion());
                     return ancestryPath;
                 } else {
@@ -181,11 +181,11 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
                     if (url == null) {
                         url = scm.getDeveloperConnection();
                         if (url == null) {
-                            log.debug("No SCM connection in project [{}:{}:{}]", project.getGroupId(),
+                            log.debug("srcdeps: No SCM connection in project [{}:{}:{}]", project.getGroupId(),
                                     project.getArtifactId(), project.getVersion());
                             return ancestryPath;
                         } else {
-                            log.debug("No SCM connection in project [{}:{}:{}] - falling back to developerConnection",
+                            log.debug("srcdeps: No SCM connection in project [{}:{}:{}] - falling back to developerConnection",
                                     project.getGroupId(), project.getArtifactId(), project.getVersion());
                         }
                     }
@@ -275,7 +275,7 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
 
                     if (!result.startsWith(GIT_SCM_PREFIX) && result.indexOf("github.com") >= 0) {
                         /* fix a malformed github URL */
-                        log.warn("Fixing the SCM URL [{}] that is apparently missing the git: prefix", result);
+                        log.warn("srcdeps: Fixing the SCM URL [{}] that is apparently missing the git: prefix", result);
                         result = GIT_SCM_PREFIX + result;
                     }
                     return result;
@@ -395,7 +395,7 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
             if (!seenGavs.contains(gav)) {
                 seenGavs.add(gav);
                 final Ga ga = new Ga(g, a);
-                log.debug("Adding GA: {}", ga);
+                log.debug("srcdeps: Adding GA: [{}]", ga);
 
                 ProjectBuildingRequest projectBuildingRequest = new DefaultProjectBuildingRequest();
                 projectBuildingRequest.setLocalRepository(session.getLocalRepository());
@@ -413,13 +413,13 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
                     MavenProject dependencyProject = result.getProject();
                     ScmUrlAncestry ancestry = ScmUrlAncestry.of(dependencyProject);
                     if (!ancestry.hasUrl()) {
-                        log.warn("No SCM connection for artifact [{}]", ga);
+                        log.warn("srcdeps: No SCM connection for artifact [{}]", ga);
                     } else {
                         final String url = ancestry.getUrl();
                         if (unsupportedUrls.contains(url)) {
                             /* was reported once already */
                         } else if (isScmUrlSupported(url)) {
-                            log.debug("Found SCM URL [{}] for GA [{}]", url, ga);
+                            log.debug("srcdeps: Found SCM URL [{}] for GA [{}]", url, ga);
                             int len = ancestry.getLength();
                             for (int i = 0; i < len; i++) {
                                 this.add(url, ancestry.getGaAt(i));
@@ -431,7 +431,7 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
                             }
                             rootGas.add(ancestry.getRootGa());
                         } else {
-                            log.warn("Unsupported SCM URL [{}] for GAV [{}]", url, ga);
+                            log.warn("srcdeps: Unsupported SCM URL [{}] for GAV [{}]", url, ga);
                             unsupportedUrls.add(url);
                         }
                     }
@@ -457,7 +457,7 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
          */
         public ScmRepository.Builder createRepository(String url) {
 
-            log.debug(" == Creating SCM repository for URL [{}]", url);
+            log.debug("srcdeps: Creating SCM repository for URL [{}]", url);
 
             ScmRepository.Builder repoBuilder = ScmRepository.builder();
 
@@ -554,7 +554,7 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
                 final Builder oldBuilder = repos.get(id);
                 if (oldBuilder != null) {
                     log.warn(
-                            "SCM repository ID not unique, will force the uniqueness of the ID: [{}], old URLs: [{}] old includes; new URLs: [{}], new includes: [{}]",
+                            "srcdeps: SCM repository ID not unique, will force the uniqueness of the ID: [{}], old URLs: [{}] old includes; new URLs: [{}], new includes: [{}]",
                             id, //
                             oldBuilder.getChildren().get("urls"), oldBuilder.getChildren().get("includes"),
                             newBuilder.getChildren().get("urls"), newBuilder.getChildren().get("includes"));
@@ -662,12 +662,12 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
         }
         this.gavSet = gavSetBuilder.build();
 
-        log.info("Using includes and excludes [{}]", gavSet);
+        log.info("srcdeps: Using includes and excludes [{}]", gavSet);
 
-        log.info("Supported SCMs: {}", scms);
+        log.info("srcdeps: Supported SCMs: [{}]", scms);
 
         if (skip || !multiModuleRootDir.equals(session.getCurrentProject().getBasedir())) {
-            log.info(getClass().getSimpleName() + " skipped");
+            log.info("srcdeps: "+ getClass().getSimpleName() + " skipped");
         } else {
 
             Configuration.Builder config = Configuration.builder() //
@@ -685,7 +685,7 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
 
             ScmRepositoryIndex index = new ScmRepositoryIndex(session, repoSession, repositorySystem, projectBuilder,
                     scms);
-            log.debug("Going over [{}] reactor projects", reactorProjects.size());
+            log.debug("srcdeps: Going over [{}] reactor projects", reactorProjects.size());
             /* first add the reactor projects to seenGas so that they get ignored */
             for (MavenProject project : reactorProjects) {
                 index.ignoreGav(project.getGroupId(), project.getArtifactId(), project.getVersion());
@@ -695,7 +695,7 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
 
                 final List<Dependency> dependencies = project.getDependencies();
 
-                log.info("Project [{}] has [{}] dependencies", project.getArtifactId(),
+                log.info("srcdeps: Project [{}] has [{}] dependencies", project.getArtifactId(),
                         dependencies == null ? 0 : dependencies.size());
 
                 if (dependencies != null) {

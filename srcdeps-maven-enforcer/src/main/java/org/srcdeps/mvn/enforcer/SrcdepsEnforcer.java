@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2017 Maven Source Dependencies
+ * Copyright 2015-2018 Maven Source Dependencies
  * Plugin contributors as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -73,7 +73,7 @@ public class SrcdepsEnforcer implements ProjectExecutionListener {
     static String[] assertFailWith(MavenAssertions failWith, List<String> goals, List<String> profiles,
             Properties properties) {
 
-        log.debug("Srcdeps Enforcer using failWith {}", failWith);
+        log.debug("srcdeps: The enforcer is using failWith [{}]", failWith);
         final Set<String> failWithGoals = failWith.getGoals();
         for (String goal : goals) {
             if (failWithGoals.contains(goal)) {
@@ -126,7 +126,7 @@ public class SrcdepsEnforcer implements ProjectExecutionListener {
     static String[] assertFailWithout(MavenAssertions failWithout, List<String> goals, List<String> profiles,
             Properties properties) {
 
-        log.debug("Srcdeps Enforcer using failWithout {}", failWithout);
+        log.debug("srcdeps: The enforcer is using failWithout [{}]", failWithout);
         final Set<String> failWithoutGoals = new LinkedHashSet<>(failWithout.getGoals());
         failWithoutGoals.removeAll(goals);
         if (!failWithoutGoals.isEmpty()) {
@@ -193,7 +193,7 @@ public class SrcdepsEnforcer implements ProjectExecutionListener {
     @Override
     public void beforeProjectLifecycleExecution(ProjectExecutionEvent event) throws LifecycleExecutionException {
         final MavenProject project = event.getProject();
-        log.info("srcdeps enforcer checks for violations in {}:{}", project.getGroupId(), project.getArtifactId());
+        log.info("srcdeps: The enforcer checks for violations in [{}:{}]", project.getGroupId(), project.getArtifactId());
 
         final Maven maven = configurationProducer.getConfiguration().getMaven();
 

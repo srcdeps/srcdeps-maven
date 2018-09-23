@@ -266,8 +266,8 @@ public abstract class AbstractMavenDepsIntegrationTest {
         WrappedMavenExecutionResult result = build(project, goals);
         result //
                 .assertErrorFreeLog() //
-                .assertLogText("SrcdepsLocalRepositoryManager will decorate "
-                        + TakariLocalRepositoryManagerFactory.class.getName()) //
+                .assertLogText("SrcdepsLocalRepositoryManager will decorate ["
+                        + TakariLocalRepositoryManagerFactory.class.getName() + "]") //
         ;
 
         repoVerifier.verify();
@@ -276,7 +276,7 @@ public abstract class AbstractMavenDepsIntegrationTest {
     }
 
     protected WrappedMavenExecutionResult build(String project, String... goals) throws Exception {
-        log.error("Building test project {}", project);
+        log.error("Building test project [{}]", project);
 
         final String quickstartRepoDir = "org/l2x6/srcdeps/quickstarts/" + project;
         SrcdepsCoreUtils.deleteDirectory(mvnLocalRepoPath.resolve(quickstartRepoDir));

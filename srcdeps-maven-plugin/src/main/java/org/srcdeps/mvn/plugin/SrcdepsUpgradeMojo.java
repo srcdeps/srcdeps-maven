@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2017 Maven Source Dependencies
+ * Copyright 2015-2018 Maven Source Dependencies
  * Plugin contributors as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -103,7 +103,7 @@ public class SrcdepsUpgradeMojo extends AbstractMojo {
     public void execute() throws MojoExecutionException, MojoFailureException {
         final Log log = getLog();
         if (skip || !multiModuleRootDir.equals(session.getCurrentProject().getBasedir())) {
-            log.info(getClass().getSimpleName() + " skipped");
+            log.info("srcdeps: ["+ getClass().getSimpleName() + "] skipped");
         } else {
 
             if (newVersion == null || newVersion.isEmpty()) {
