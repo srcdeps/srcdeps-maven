@@ -349,6 +349,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
 
     @Test
     public void mvnGitParent() throws Exception {
+        log.info("Running method {}", testName.getMethodName());
 
         final String project = "srcdeps-mvn-git-parent-quickstart";
         final String srcVersion = "0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8";

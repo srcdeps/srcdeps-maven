@@ -195,6 +195,11 @@
       </dependency>
       <dependency>
         <groupId>org.srcdeps.mvn</groupId>
+        <artifactId>srcdeps-maven-plugin</artifactId>
+        <version>3.4.0-SNAPSHOT</version>
+      </dependency>
+      <dependency>
+        <groupId>org.srcdeps.mvn</groupId>
         <artifactId>srcdeps-maven-quickstarts</artifactId>
         <version>3.4.0-SNAPSHOT</version>
       </dependency>

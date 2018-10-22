@@ -36,7 +36,6 @@ import org.srcdeps.core.config.Maven;
 import org.srcdeps.core.util.SrcdepsCoreUtils;
 
 import io.takari.aether.localrepo.TakariLocalRepositoryManagerFactory;
-import io.takari.maven.testing.TestResources;
 import io.takari.maven.testing.executor.MavenExecution;
 import io.takari.maven.testing.executor.MavenRuntime;
 import io.takari.maven.testing.executor.MavenRuntime.MavenRuntimeBuilder;
@@ -50,10 +49,10 @@ public abstract class AbstractMavenDepsIntegrationTest {
 
     @BeforeClass
     public static void beforeClass() throws IOException {
-        final Path dir = TestUtils.getMvnLocalRepo().getRootDirectory();
-        final Path takariLocalRepoDir = dir.resolve("io/takari");
-        if (Files.exists(dir)) {
-            try (DirectoryStream<Path> subPaths = Files.newDirectoryStream(dir)) {
+        final Path mvnLocalRepoPath = TestUtils.getMvnLocalRepo().getRootDirectory();
+        final Path takariLocalRepoDir = mvnLocalRepoPath.resolve("io/takari");
+        if (Files.exists(mvnLocalRepoPath)) {
+            try (DirectoryStream<Path> subPaths = Files.newDirectoryStream(mvnLocalRepoPath)) {
                 for (Path subPath : subPaths) {
                     if (Files.isDirectory(subPath)) {
                         Files.walkFileTree(subPath, new SimpleFileVisitor<Path>() {
@@ -120,8 +119,10 @@ public abstract class AbstractMavenDepsIntegrationTest {
                 }
             }
         } else {
-            SrcdepsCoreUtils.ensureDirectoryExists(dir);
+            SrcdepsCoreUtils.ensureDirectoryExists(mvnLocalRepoPath);
         }
+
+        SrcdepsCoreUtils.copyDirectory(TestUtils.getMvnLocalRepoBasePath(), mvnLocalRepoPath);
 
         System.setProperty(Maven.getSrcdepsMavenSettingsProperty(), mrmSettingsXmlPath);
 
@@ -143,7 +144,7 @@ public abstract class AbstractMavenDepsIntegrationTest {
     }
 
     @Rule
-    public final TestResources resources = TestUtils.createTestResources();
+    public final SrcdepsTestResources resources = new SrcdepsTestResources();
 
     public final MavenRuntime verifier;
     public AbstractMavenDepsIntegrationTest(MavenRuntimeBuilder runtimeBuilder) throws IOException, Exception {
@@ -174,8 +175,8 @@ public abstract class AbstractMavenDepsIntegrationTest {
         final String quickstartRepoDir = "org/l2x6/srcdeps/quickstarts/" + project;
         SrcdepsCoreUtils.deleteDirectory(TestUtils.getMvnLocalRepoPath().resolve(quickstartRepoDir));
 
-        MavenExecution execution = verifier.forProject(resources.getBasedir(project)) //
-                .withCliOption("-X") //
+        MavenExecution execution = verifier.forProject(resources.getBasedirPath(project).toFile()) //
+                //.withCliOption("-X") //
                 .withCliOption("-B") // batch
                 .withCliOption("-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn") //
                 .withCliOptions("-Dmaven.repo.local=" + TestUtils.getMvnLocalRepo().getRootDirectory().toAbsolutePath().toString()) //

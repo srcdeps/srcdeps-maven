@@ -129,9 +129,20 @@
     </dependency>
 
     <dependency>
+      <groupId>org.srcdeps.mvn</groupId>
+      <artifactId>srcdeps-maven-plugin</artifactId>
+    </dependency>
+
+    <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-api</artifactId>
       <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-simple</artifactId>
+      <scope>test</scope>
     </dependency>
 
   </dependencies>
@@ -158,6 +169,73 @@
             <goals>
               <goal>stop</goal>
             </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-install-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>install-srcdeps-maven-plugin</id>
+            <phase>process-test-classes</phase>
+            <goals>
+              <goal>install-file</goal>
+            </goals>
+            <configuration>
+              <file>${project.basedir}/../srcdeps-maven-plugin/target/srcdeps-maven-plugin-${project.version}.jar</file>
+              <pomFile>${project.basedir}/../srcdeps-maven-plugin/pom.xml</pomFile>
+              <localRepositoryPath>${project.build.directory}/mvn-local-repo-base</localRepositoryPath>
+            </configuration>
+          </execution>
+          <execution>
+            <id>install-srcdeps-local-repository</id>
+            <phase>process-test-classes</phase>
+            <goals>
+              <goal>install-file</goal>
+            </goals>
+            <configuration>
+              <file>${project.basedir}/../srcdeps-maven-local-repository/target/srcdeps-maven-local-repository-${project.version}.jar</file>
+              <pomFile>${project.basedir}/../srcdeps-maven-local-repository/pom.xml</pomFile>
+              <localRepositoryPath>${project.build.directory}/mvn-local-repo-base</localRepositoryPath>
+            </configuration>
+          </execution>
+          <execution>
+            <id>install-srcdeps-enforcer</id>
+            <phase>process-test-classes</phase>
+            <goals>
+              <goal>install-file</goal>
+            </goals>
+            <configuration>
+              <file>${project.basedir}/../srcdeps-maven-enforcer/target/srcdeps-maven-enforcer-${project.version}.jar</file>
+              <pomFile>${project.basedir}/../srcdeps-maven-enforcer/pom.xml</pomFile>
+              <localRepositoryPath>${project.build.directory}/mvn-local-repo-base</localRepositoryPath>
+            </configuration>
+          </execution>
+          <execution>
+            <id>install-srcdeps-base</id>
+            <phase>process-test-classes</phase>
+            <goals>
+              <goal>install-file</goal>
+            </goals>
+            <configuration>
+              <file>${project.basedir}/../srcdeps-maven-base/target/srcdeps-maven-base-${project.version}.jar</file>
+              <pomFile>${project.basedir}/../srcdeps-maven-base/pom.xml</pomFile>
+              <localRepositoryPath>${project.build.directory}/mvn-local-repo-base</localRepositoryPath>
+            </configuration>
+          </execution>
+          <execution>
+            <id>install-srcdeps-maven-parent</id>
+            <phase>process-test-classes</phase>
+            <goals>
+              <goal>install-file</goal>
+            </goals>
+            <configuration>
+              <file>${project.basedir}/../pom.xml</file>
+              <pomFile>${project.basedir}/../pom.xml</pomFile>
+              <localRepositoryPath>${project.build.directory}/mvn-local-repo-base</localRepositoryPath>
+            </configuration>
           </execution>
         </executions>
       </plugin>

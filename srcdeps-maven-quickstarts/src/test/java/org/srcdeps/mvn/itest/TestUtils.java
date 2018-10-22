@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
 import java.util.regex.Matcher;
@@ -33,26 +35,28 @@ import org.srcdeps.core.fs.CannotAcquireLockException;
 import org.srcdeps.core.fs.PathLocker;
 import org.srcdeps.core.util.SrcdepsCoreUtils;
 
-import io.takari.maven.testing.TestResources;
-
+/**
+ * @author <a href="https://github.com/ppalaga">Peter Palaga</a>
+ */
 public class TestUtils {
     private static final Path basedir = Paths.get(System.getProperty("basedir", new File("").getAbsolutePath()));
+    private static final Path dependencySourceTreesPath;
     private static final String encoding = System.getProperty("project.build.sourceEncoding");
     private static final boolean isWindows = System.getProperty("os.name").toLowerCase().contains("win");
     private static final MavenLocalRepository mvnLocalRepo;
+    private static final Path mvnLocalRepoBasePath;
     private static final Path mvnLocalRepoPath;
     private static final String projectVersion = System.getProperty("project.version");
-    private static final Pattern replacementPattern = Pattern
-            .compile(Pattern.quote("<version>") + "[^<]+" + Pattern.quote("</version><!-- @srcdeps.version@ -->"));
     private static final Path srcdepsBuildMetadataPath;
     private static final Path srcdepsQuickstartsPath;
     static {
         srcdepsQuickstartsPath = basedir.resolve("../srcdeps-maven-quickstarts").normalize();
+        mvnLocalRepoBasePath = basedir.resolve("target/mvn-local-repo-base");
         mvnLocalRepoPath = basedir.resolve("target/mvn-local-repo");
+        dependencySourceTreesPath = basedir.resolve("target/dependency-source-trees");
         srcdepsBuildMetadataPath = basedir.resolve("target/srcdeps/build-metadata");
         mvnLocalRepo = new MavenLocalRepository(mvnLocalRepoPath);
     }
-
     public static void assertExists(Path path) {
         Assert.assertTrue(String.format("File or directory does not exist [%s]", path.toString()), Files.exists(path));
     }
@@ -62,35 +66,17 @@ public class TestUtils {
                 !Files.exists(path));
     }
 
-    public static TestResources createTestResources() {
-        return new TestResources(TestUtils.getSrcdepsQuickstartsPath().toString(),
-                "target/test-projects") {
-
-            @Override
-            public File getBasedir(String project) throws IOException {
-
-                File result = super.getBasedir(project);
-
-                Path extensionsXmlPath = result.toPath().resolve(".mvn/extensions.xml");
-
-                String extensionsXmlContent = new String(Files.readAllBytes(extensionsXmlPath), encoding);
-
-                String newContent = replacementPattern.matcher(extensionsXmlContent)
-                        .replaceAll("<version>" + TestUtils.getProjectversion() + "</version>");
-
-                Assert.assertNotEquals(newContent, extensionsXmlContent);
-
-                Files.write(extensionsXmlPath, newContent.getBytes(encoding));
-
-                return result;
-            }
-
-        };
+    public static Path createSourceTreesTestRunPath() throws IOException {
+        final String subdir = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "-"
+                + ((int) (Math.random() * 1000));
+        final Path result = dependencySourceTreesPath.resolve(subdir);
+        Files.createDirectories(result);
+        return result;
     }
 
     /**
-     * Deletes {@code target/srcdeps}. This tends to fail in some cases on Windows for which we do a dirty workaround
-     * of FS locking the git repo that cannot be deleted, so that it is not re-used by the subsequent test.
+     * Deletes {@code target/srcdeps}. This tends to fail in some cases on Windows for which we do a dirty workaround of
+     * FS locking the git repo that cannot be deleted, so that it is not re-used by the subsequent test.
      *
      * @throws IOException
      * @throws CannotAcquireLockException
@@ -107,10 +93,11 @@ public class TestUtils {
                 if ("\\".equals(slash)) {
                     slash = "\\\\";
                 }
-                final Matcher m = Pattern.compile("[^\\[]+\\[(.*"+ slash +"\\d+)"+ slash +"\\.git.*$").matcher(msg);
+                final Matcher m = Pattern.compile("[^\\[]+\\[(.*" + slash + "\\d+)" + slash + "\\.git.*$").matcher(msg);
                 if (m.matches()) {
                     final String path = m.group(1);
-                    MavenDepsMavenIntegrationTest.log.warn("Locking [" + path + "] as a workaround of not being able to remove it", e);
+                    MavenDepsMavenIntegrationTest.log
+                            .warn("Locking [" + path + "] as a workaround of not being able to remove it", e);
                     new PathLocker<Object>().lockDirectory(Paths.get(path), new Object());
                 } else {
                     throw e;
@@ -125,12 +112,20 @@ public class TestUtils {
         return basedir;
     }
 
+    public static Path getDependencySourceTreesPath() {
+        return dependencySourceTreesPath;
+    }
+
     public static String getEncoding() {
         return encoding;
     }
 
     public static MavenLocalRepository getMvnLocalRepo() {
         return mvnLocalRepo;
+    }
+
+    public static Path getMvnLocalRepoBasePath() {
+        return mvnLocalRepoBasePath;
     }
 
     public static Path getMvnLocalRepoPath() {

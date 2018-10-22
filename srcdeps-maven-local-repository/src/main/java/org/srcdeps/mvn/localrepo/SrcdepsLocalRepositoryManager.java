@@ -206,6 +206,7 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                         .timeoutMs(scmRepo.getBuildTimeout().toMilliseconds()) //
                         .skipTests(scmRepo.isSkipTests()) //
                         .forwardPropertyNames(configuration.getForwardProperties()) //
+                        .forwardPropertyValues(configuration.getForwardPropertyValues()) //
                         .addDefaultBuildArguments(scmRepo.isAddDefaultBuildArguments()) //
                         .verbosity(scmRepo.getVerbosity()) //
                         .ioRedirects(ioRedirects) //
@@ -256,9 +257,9 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                 /* check once again if the delegate sees the newly built artifact */
                 final LocalArtifactResult newResult = delegate.find(session, request);
                 if (!newResult.isAvailable()) {
-                    log.error(
-                            "srcdeps: Build succeeded but the artifact {} is still not available in the local repository",
-                            artifact);
+                    throw new RuntimeException(String.format(
+                            "srcdeps: Build succeeded but the artifact [%s] is still not available in the local repository",
+                            artifact));
                 }
                 return newResult;
             }

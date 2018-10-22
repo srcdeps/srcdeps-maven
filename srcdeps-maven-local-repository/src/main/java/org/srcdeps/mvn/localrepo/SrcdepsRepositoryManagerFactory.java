@@ -112,7 +112,7 @@ public class SrcdepsRepositoryManagerFactory implements LocalRepositoryManagerFa
         for (Entry<String, LocalRepositoryManagerFactory> en : factoryImpls.entrySet()) {
             LocalRepositoryManagerFactory factory = en.getValue();
 
-            log.debug("srcdeps: rcdepsRepositoryManagerFactory iterating over LocalRepositoryManagerFactory [{}]: [{}]",
+            log.debug("srcdeps: SrcdepsRepositoryManagerFactory iterating over LocalRepositoryManagerFactory [{}]: [{}]",
                     en.getKey(), factory.getClass().getName());
 
             String factoryClassName = factory.getClass().getName();
