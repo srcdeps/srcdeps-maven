@@ -29,9 +29,7 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.ObjectId;
 import org.eclipse.jgit.revwalk.RevCommit;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,9 +47,6 @@ import io.takari.maven.testing.executor.junit.MavenJUnitTestRunner;
 @MavenVersions({ "3.3.1" })
 public class MavenMasterConfigIntegrationTest extends AbstractMavenDepsIntegrationTest {
     static final Logger log = LoggerFactory.getLogger(MavenDepsMavenIntegrationTest.class);
-
-    @Rule
-    public TestName testName = new TestName();
 
     public MavenMasterConfigIntegrationTest(MavenRuntimeBuilder runtimeBuilder) throws IOException, Exception {
         super(runtimeBuilder);

@@ -30,6 +30,8 @@ import java.nio.file.attribute.BasicFileAttributes;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Rule;
+import org.junit.rules.TestName;
+import org.junit.runner.Description;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srcdeps.core.config.Maven;
@@ -146,6 +148,17 @@ public abstract class AbstractMavenDepsIntegrationTest {
     @Rule
     public final SrcdepsTestResources resources = new SrcdepsTestResources();
 
+    @Rule
+    public TestName testName = new TestName() {
+
+        @Override
+        protected void starting(Description d) {
+            super.starting(d);
+            log.info("Running test {}.{}", AbstractMavenDepsIntegrationTest.this.getClass().getSimpleName(), getMethodName());
+        }
+
+    };
+
     public final MavenRuntime verifier;
     public AbstractMavenDepsIntegrationTest(MavenRuntimeBuilder runtimeBuilder) throws IOException, Exception {
         this.verifier = runtimeBuilder.withExtension(new File("target/classes").getCanonicalFile()).build();
@@ -170,7 +183,7 @@ public abstract class AbstractMavenDepsIntegrationTest {
     }
 
     protected WrappedMavenExecutionResult build(String project, String... goals) throws Exception {
-        log.error("Building test project [{}]", project);
+        log.info("Building test project [{}]", project);
 
         final String quickstartRepoDir = "org/l2x6/srcdeps/quickstarts/" + project;
         SrcdepsCoreUtils.deleteDirectory(TestUtils.getMvnLocalRepoPath().resolve(quickstartRepoDir));

@@ -26,9 +26,7 @@ import java.util.jar.Manifest;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ResetCommand.ResetType;
 import org.junit.Assert;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TestName;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,9 +51,6 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
 
     protected static final String ORG_L2X6_MAVEN_SRCDEPS_ITEST_GROUPID = "org.l2x6.maven.srcdeps.itest";
 
-    @Rule
-    public TestName testName = new TestName();
-
     public MavenDepsMavenIntegrationTest(MavenRuntimeBuilder runtimeBuilder) throws Exception {
         super(runtimeBuilder);
     }
@@ -79,7 +74,6 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
 
     @Test
     public void mvnGitBranch() throws Exception {
-        log.info("Running method {}", testName.getMethodName());
         TestUtils.deleteSrcdepsDirectory();
 
         PersistentBuildMetadataStore buildMetadataStore = new PersistentBuildMetadataStore(TestUtils.getSrcdepsBuildMetadataPath());
@@ -349,7 +343,6 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
 
     @Test
     public void mvnGitParent() throws Exception {
-        log.info("Running method {}", testName.getMethodName());
 
         final String project = "srcdeps-mvn-git-parent-quickstart";
         final String srcVersion = "0.0.2-SRC-revision-3d00c2a91af593c01c9439cb16cb5f52d2ddbcf8";
@@ -411,7 +404,6 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
 
     @Test
     public void mvnGitSnapshotRevision() throws Exception {
-        log.info("Running method {}", testName.getMethodName());
         TestUtils.deleteSrcdepsDirectory();
 
         PersistentBuildMetadataStore buildMetadataStore = new PersistentBuildMetadataStore(TestUtils.getSrcdepsBuildMetadataPath());

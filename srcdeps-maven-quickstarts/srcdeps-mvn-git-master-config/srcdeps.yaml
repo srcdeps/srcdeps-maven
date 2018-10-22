@@ -17,7 +17,6 @@
 
 configModelVersion: 2.4
 forwardAsMasterConfig: true
-verbosity: info
 repositories:
   org.srcdeps.mvn.quickstarts.srcdeps-mvn-git-master-config.hello:
     includes:
