@@ -24,7 +24,7 @@
 # `configModelVersion` exists just in case we'll have to change the schema of srcdeps.yaml in the future.
 #
 # Required, no default, only 1.0 supported at the moment
-configModelVersion: 2.3
+configModelVersion: 2.4
 
 maven:
   failWith:

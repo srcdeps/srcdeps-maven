@@ -41,7 +41,7 @@
 #
 # Required, no default
 # Since 1.0
-configModelVersion: 2.3
+configModelVersion: 2.4
 
 # `repositories` - a map of source repositories to checkout and build from
 #

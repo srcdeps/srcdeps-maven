@@ -16,39 +16,27 @@
  */
 package org.srcdeps.mvn.config;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
 import javax.inject.Named;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.srcdeps.config.yaml.YamlConfigurationIo;
+import org.srcdeps.config.yaml.YamlConfigurationReader;
 import org.srcdeps.core.config.Configuration;
 import org.srcdeps.core.config.ConfigurationException;
+import org.srcdeps.core.config.ConfigurationLocator;
+import org.srcdeps.core.config.Maven;
 import org.srcdeps.core.config.tree.walk.DefaultsAndInheritanceVisitor;
 import org.srcdeps.core.config.tree.walk.OverrideVisitor;
 import org.srcdeps.mvn.Constants;
 
 @Named
 public class ConfigurationProducer {
-    private static final Logger log = LoggerFactory.getLogger(ConfigurationProducer.class);
-
-    /** Before 3.1.0 this used to be the default location of srcdeps.yaml file */
-    private static final Path MVN_SRCDEPS_YAML_PATH = Paths.get(".mvn", "srcdeps.yaml");
-
-    /** Since 3.1.0 this is the default location of srcdeps.yaml file */
-    private static final Path SRCDEPS_YAML_PATH = Paths.get("srcdeps.yaml");
 
     private final Configuration configuration;
-    private final Path configurationLocation;
     private final Path multimoduleProjectRootDirectory;
 
-    public ConfigurationProducer() {
+    public ConfigurationProducer() throws ConfigurationException {
         super();
 
         String basePathString = System.getProperty(Constants.MAVEN_MULTI_MODULE_PROJECT_DIRECTORY_PROPERTY);
@@ -57,48 +45,18 @@ public class ConfigurationProducer {
                     Constants.MAVEN_MULTI_MODULE_PROJECT_DIRECTORY_PROPERTY));
         }
         multimoduleProjectRootDirectory = Paths.get(basePathString).toAbsolutePath();
-        final Path defaultSrcdepsYamlPath = multimoduleProjectRootDirectory.resolve(SRCDEPS_YAML_PATH);
-        final Path legacySrcdepsYamlPath = multimoduleProjectRootDirectory.resolve(MVN_SRCDEPS_YAML_PATH);
-        Path srcdepsYamlPath = defaultSrcdepsYamlPath;
-        if (!Files.exists(srcdepsYamlPath)) {
-            srcdepsYamlPath = legacySrcdepsYamlPath;
-        }
 
-        this.configurationLocation = srcdepsYamlPath;
-
-        final Configuration.Builder configBuilder;
-        if (Files.exists(srcdepsYamlPath)) {
-            log.debug("srcdeps: Using configuration [{}]", configurationLocation);
-            final String encoding = System.getProperty(Configuration.getSrcdepsEncodingProperty(), "utf-8");
-            final Charset cs = Charset.forName(encoding);
-            try (Reader r = Files.newBufferedReader(configurationLocation, cs)) {
-                configBuilder = new YamlConfigurationIo().read(r);
-            } catch (IOException | ConfigurationException e) {
-                throw new RuntimeException(e);
-            }
-        } else {
-            log.warn(
-                    "srcdeps: Could not locate srcdeps configuration at neither [{}] nor [{}], defaulting to an empty configuration",
-                    defaultSrcdepsYamlPath, legacySrcdepsYamlPath);
-            configBuilder = Configuration.builder();
-        }
-
-        this.configuration = configBuilder //
+        this.configuration = new ConfigurationLocator(System.getProperties(), true) //
+                .locate(multimoduleProjectRootDirectory, new YamlConfigurationReader()) //
                 .accept(new OverrideVisitor(System.getProperties())) //
                 .accept(new DefaultsAndInheritanceVisitor()) //
+                .forwardPropertyValue(Maven.getSrcdepsMavenVersionProperty(), Constants.SRCDEPS_MAVEN_VERSION)
                 .build();
 
     }
 
     public Configuration getConfiguration() {
         return configuration;
-    }
-
-    /**
-     * @return the path to {@code srcdeps.yaml} file
-     */
-    public Path getConfigurationLocation() {
-        return configurationLocation;
     }
 
     /**

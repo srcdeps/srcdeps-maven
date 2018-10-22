@@ -70,13 +70,12 @@ import org.srcdeps.mvn.config.ConfigurationProducer;
 public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
     private static final Logger log = LoggerFactory.getLogger(SrcdepsLocalRepositoryManager.class);
 
-    private static List<String> enhanceBuildArguments(List<String> buildArguments, Path configurationLocation,
-            String localRepo) {
+    private static List<String> enhanceBuildArguments(List<String> buildArguments, String localRepo) {
         List<String> result = new ArrayList<>();
         for (String arg : buildArguments) {
             if (arg.startsWith("-Dmaven.repo.local=")) {
                 /* We won't touch maven.repo.local set in the user's config */
-                log.debug("srcdeps: Forwarding [{}] to the nested build as set in [{}]", arg, configurationLocation);
+                log.debug("srcdeps: Forwarding [{}] to the nested build as set in srcdeps.yaml file", arg);
                 return buildArguments;
             }
             result.add(arg);
@@ -194,7 +193,6 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                         .build();
 
                 List<String> buildArgs = enhanceBuildArguments(scmRepo.getBuildArguments(),
-                        configurationProducer.getConfigurationLocation(),
                         delegate.getRepository().getBasedir().getAbsolutePath());
                 scmRepoId = scmRepo.getId();
                 BuildRequest buildRequest = BuildRequest.builder() //
@@ -207,7 +205,7 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                         .buildArguments(buildArgs) //
                         .timeoutMs(scmRepo.getBuildTimeout().toMilliseconds()) //
                         .skipTests(scmRepo.isSkipTests()) //
-                        .forwardProperties(configuration.getForwardProperties()) //
+                        .forwardPropertyNames(configuration.getForwardProperties()) //
                         .addDefaultBuildArguments(scmRepo.isAddDefaultBuildArguments()) //
                         .verbosity(scmRepo.getVerbosity()) //
                         .ioRedirects(ioRedirects) //
@@ -217,7 +215,8 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
 
                 final String buildRequestHash = buildRequest.getHash();
                 final String sourceTreeCommitId = scmService.checkout(buildRequest);
-                log.info("srcdeps: Mapped artifact [{}] to revision [{}] via [{}]", artifact, sourceTreeCommitId, srcVersion);
+                log.info("srcdeps: Mapped artifact [{}] to revision [{}] via [{}]", artifact, sourceTreeCommitId,
+                        srcVersion);
                 fetchLog.add(fetchId);
 
                 final String pastCommitId = buildMetadataStore.retrieveCommitId(buildRequestHash);
@@ -265,7 +264,7 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
             }
 
         } catch (BuildException | IOException e) {
-            log.error("srcdeps: Could not build ["+ scmRepoId +"] using request [" + request + "]", e);
+            log.error("srcdeps: Could not build [" + scmRepoId + "] using request [" + request + "]", e);
         }
         return result;
     }
@@ -289,7 +288,8 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
             final SrcVersion srcVersion = SrcVersion.parse(version);
             if (srcVersion.isImmutable() && result.isAvailable()) {
                 /* Only tags and revisions do not need to get rebuilt once there in the local repo */
-                log.debug("srcdeps: Found [{}] in the local maven repository; no need to rebuild", request.getArtifact());
+                log.debug("srcdeps: Found [{}] in the local maven repository; no need to rebuild",
+                        request.getArtifact());
                 return result;
             }
 

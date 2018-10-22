@@ -52,7 +52,7 @@ there is no `srcdeps.yaml` in the root directory.
 
 [source,yaml]
 ----
-configModelVersion: 2.3
+configModelVersion: 2.4
 repositories:
   org.my-group:
     includes:
@@ -107,7 +107,7 @@ If you do not want or cannot change the `pom.xml`, you can achieve a similar res
 
 [source,yaml]
 ----
-configModelVersion: 2.3
+configModelVersion: 2.4
 repositories:
   org.my-group:
     includes:
