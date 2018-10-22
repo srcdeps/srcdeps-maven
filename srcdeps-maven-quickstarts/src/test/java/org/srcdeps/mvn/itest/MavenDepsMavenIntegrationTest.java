@@ -17,15 +17,11 @@
 package org.srcdeps.mvn.itest;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.jar.Manifest;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ResetCommand.ResetType;
@@ -37,8 +33,6 @@ import org.junit.runner.RunWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.srcdeps.core.Gavtc;
-import org.srcdeps.core.fs.CannotAcquireLockException;
-import org.srcdeps.core.fs.PathLocker;
 import org.srcdeps.core.fs.PersistentBuildMetadataStore;
 import org.srcdeps.core.util.SrcdepsCoreUtils;
 
@@ -55,42 +49,9 @@ import io.takari.maven.testing.executor.junit.MavenJUnitTestRunner;
 @MavenVersions({ "3.3.1" })
 public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationTest {
 
-    private static final Logger log = LoggerFactory.getLogger(MavenDepsMavenIntegrationTest.class);
+    static final Logger log = LoggerFactory.getLogger(MavenDepsMavenIntegrationTest.class);
 
     protected static final String ORG_L2X6_MAVEN_SRCDEPS_ITEST_GROUPID = "org.l2x6.maven.srcdeps.itest";
-
-    /**
-     * Deletes {@code target/srcdeps}. This tends to fail in some cases on Windows for which we do a dirty workaround
-     * of FS locking the git repo that cannot be deleted, so that it is not re-used by the subsequent test.
-     *
-     * @throws IOException
-     * @throws CannotAcquireLockException
-     */
-    private static void deleteSrcdepsDirectory() throws IOException, CannotAcquireLockException {
-        final Path srcdepsPath = basedir.resolve("target/srcdeps");
-        log.warn("Deleting [{}]", srcdepsPath);
-        try {
-            SrcdepsCoreUtils.deleteDirectory(srcdepsPath);
-        } catch (IOException e) {
-            if (isWindows) {
-                final String msg = e.getMessage();
-                String slash = File.separator;
-                if ("\\".equals(slash)) {
-                    slash = "\\\\";
-                }
-                final Matcher m = Pattern.compile("[^\\[]+\\[(.*"+ slash +"\\d+)"+ slash +"\\.git.*$").matcher(msg);
-                if (m.matches()) {
-                    final String path = m.group(1);
-                    log.warn("Locking [" + path + "] as a workaround of not being able to remove it", e);
-                    new PathLocker<Object>().lockDirectory(Paths.get(path), new Object());
-                } else {
-                    throw e;
-                }
-            } else {
-                throw e;
-            }
-        }
-    }
 
     @Rule
     public TestName testName = new TestName();
@@ -102,7 +63,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
     @Test
     public void mvnFailWithArgumentsBom() throws Exception {
         final String project = "srcdeps-mvn-git-bom-quickstart";
-        SrcdepsCoreUtils.deleteDirectory(mvnLocalRepo.resolveGroup(groupId(project)));
+        SrcdepsCoreUtils.deleteDirectory(TestUtils.getMvnLocalRepo().resolveGroup(groupId(project)));
         WrappedMavenExecutionResult result = build(project, "clean", "release:prepare");
         result.assertLogText(
                 "SrcdepsLocalRepositoryManager will decorate [" + TakariLocalRepositoryManagerFactory.class.getName() + "]") //
@@ -114,7 +75,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
     @Test
     public void mvnFailWithArgumentsDependency() throws Exception {
         final String project = "srcdeps-mvn-git-revision-quickstart";
-        SrcdepsCoreUtils.deleteDirectory(mvnLocalRepo.resolveGroup(groupId(project)));
+        SrcdepsCoreUtils.deleteDirectory(TestUtils.getMvnLocalRepo().resolveGroup(groupId(project)));
 
         WrappedMavenExecutionResult result = build(project, "clean", "release:prepare");
         result.assertLogText(
@@ -128,7 +89,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
     @Test
     public void mvnFailWithArgumentsParent() throws Exception {
         final String project = "srcdeps-mvn-git-parent-quickstart";
-        SrcdepsCoreUtils.deleteDirectory(mvnLocalRepo.resolveGroup(groupId(project)));
+        SrcdepsCoreUtils.deleteDirectory(TestUtils.getMvnLocalRepo().resolveGroup(groupId(project)));
         WrappedMavenExecutionResult result = build(project, "clean", "release:prepare");
         result.assertLogText(
                 "SrcdepsLocalRepositoryManager will decorate [" + TakariLocalRepositoryManagerFactory.class.getName() + "]") //
@@ -140,7 +101,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
     @Test
     public void mvnFailWithArgumentsProfile() throws Exception {
         final String project = "srcdeps-mvn-git-profile-quickstart";
-        SrcdepsCoreUtils.deleteDirectory(mvnLocalRepo.resolveGroup(groupId(project)));
+        SrcdepsCoreUtils.deleteDirectory(TestUtils.getMvnLocalRepo().resolveGroup(groupId(project)));
         WrappedMavenExecutionResult result = build(project, "clean", "install", "-Psrcdeps-profile");
         result.assertLogText(
                 "SrcdepsLocalRepositoryManager will decorate [" + TakariLocalRepositoryManagerFactory.class.getName() + "]") //
@@ -152,7 +113,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
     @Test
     public void mvnFailWithArgumentsPropertyCli() throws Exception {
         final String project = "srcdeps-mvn-git-bom-quickstart";
-        SrcdepsCoreUtils.deleteDirectory(mvnLocalRepo.resolveGroup(groupId(project)));
+        SrcdepsCoreUtils.deleteDirectory(TestUtils.getMvnLocalRepo().resolveGroup(groupId(project)));
         WrappedMavenExecutionResult result = build(project, "clean", "install", "-Dsrcdeps-fail-property");
         result.assertLogText(
                 "SrcdepsLocalRepositoryManager will decorate [" + TakariLocalRepositoryManagerFactory.class.getName() + "]") //
@@ -164,7 +125,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
     @Test
     public void mvnFailWithArgumentsPropertyCliOverride() throws Exception {
         final String project = "srcdeps-mvn-git-revision-quickstart";
-        SrcdepsCoreUtils.deleteDirectory(mvnLocalRepo.resolveGroup(groupId(project)));
+        SrcdepsCoreUtils.deleteDirectory(TestUtils.getMvnLocalRepo().resolveGroup(groupId(project)));
         WrappedMavenExecutionResult result = build(project, "clean", "install", "-Dsrcdeps-fail-property-cli",
                 "-Dsrcdeps.maven.failWith.properties=srcdeps-fail-property-cli");
         result.assertLogText(
@@ -177,7 +138,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
     @Test
     public void mvnFailWithArgumentsPropertyPom() throws Exception {
         final String project = "srcdeps-mvn-git-profile-quickstart";
-        SrcdepsCoreUtils.deleteDirectory(mvnLocalRepo.resolveGroup(groupId(project)));
+        SrcdepsCoreUtils.deleteDirectory(TestUtils.getMvnLocalRepo().resolveGroup(groupId(project)));
         WrappedMavenExecutionResult result = build(project, "clean", "install", "-Psrcdeps-property-profile");
         result.assertLogText(
                 "SrcdepsLocalRepositoryManager will decorate [" + TakariLocalRepositoryManagerFactory.class.getName() + "]") //
@@ -206,9 +167,9 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
     @Test
     public void mvnGitBranch() throws Exception {
         log.info("Running method {}", testName.getMethodName());
-        deleteSrcdepsDirectory();
+        TestUtils.deleteSrcdepsDirectory();
 
-        PersistentBuildMetadataStore buildMetadataStore = new PersistentBuildMetadataStore(srcdepsBuildMetadataPath);
+        PersistentBuildMetadataStore buildMetadataStore = new PersistentBuildMetadataStore(TestUtils.getSrcdepsBuildMetadataPath());
         {
             PersistentBuildMetadataStore.BuildRequestIdCollector consumer = new PersistentBuildMetadataStore.BuildRequestIdCollector();
             buildMetadataStore.walkBuildRequestHashes(consumer);
@@ -229,13 +190,13 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
         repoVerifier.clean();
 
         final String quickstartRepoDir = "org/l2x6/srcdeps/quickstarts/" + project;
-        SrcdepsCoreUtils.deleteDirectory(mvnLocalRepoPath.resolve(quickstartRepoDir));
+        SrcdepsCoreUtils.deleteDirectory(TestUtils.getMvnLocalRepoPath().resolve(quickstartRepoDir));
 
         /* this copies the test project to target/test-projects */
         final File workDir = resources.getBasedir(project);
 
         /* Create a local clone */
-        final Path localGitRepos = basedir.resolve("target/local-git-repos");
+        final Path localGitRepos = TestUtils.getBasedir().resolve("target/local-git-repos");
         final Path srcdepsTestArtifactDirectory = localGitRepos.resolve("srcdeps-test-artifact");
         SrcdepsCoreUtils.deleteDirectory(srcdepsTestArtifactDirectory);
 
@@ -260,7 +221,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
             final MavenExecution execution = verifier.forProject(workDir) //
                     .withCliOption("-X") //
                     .withCliOption("-B") // batch
-                    .withCliOptions("-Dmaven.repo.local=" + mvnLocalRepo.getRootDirectory().toAbsolutePath().toString()) //
+                    .withCliOptions("-Dmaven.repo.local=" + TestUtils.getMvnLocalRepo().getRootDirectory().toAbsolutePath().toString()) //
                     .withCliOption("-s").withCliOption(mrmSettingsXmlPath)
                     .withCliOption(
                             "-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn") //
@@ -315,7 +276,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
             final MavenExecution execution = verifier.forProject(workDir) //
                     .withCliOption("-X") //
                     .withCliOption("-B") // batch
-                    .withCliOptions("-Dmaven.repo.local=" + mvnLocalRepo.getRootDirectory().toAbsolutePath().toString()) //
+                    .withCliOptions("-Dmaven.repo.local=" + TestUtils.getMvnLocalRepo().getRootDirectory().toAbsolutePath().toString()) //
                     .withCliOption("-s").withCliOption(mrmSettingsXmlPath)
                     .withCliOption(
                             "-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn") //
@@ -363,7 +324,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
             final MavenExecution execution = verifier.forProject(workDir) //
                     // .withCliOption("-X") //
                     .withCliOption("-B") // batch
-                    .withCliOptions("-Dmaven.repo.local=" + mvnLocalRepo.getRootDirectory().toAbsolutePath().toString()) //
+                    .withCliOptions("-Dmaven.repo.local=" + TestUtils.getMvnLocalRepo().getRootDirectory().toAbsolutePath().toString()) //
                     .withCliOption("-s").withCliOption(mrmSettingsXmlPath)
                     .withCliOption(
                             "-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn") //
@@ -388,7 +349,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogText("srcdeps: A rebuild of [org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
                             + "]] was triggered by [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch] lookup")
                     .assertLogText("srcdeps: Uninstalling [1] GAVs before rebuilding them")
-                    .assertLogTextPath("srcdeps: Uninstalling [" + mvnLocalRepoPath
+                    .assertLogTextPath("srcdeps: Uninstalling [" + TestUtils.getMvnLocalRepoPath()
                             + "/org/l2x6/maven/srcdeps/itest/srcdeps-test-artifact/0.0.1-SRC-branch-morning-branch"
                                     .replace('/', File.separatorChar))
                     .assertLogTextPath("srcdeps: Path [" + hashA84403bPath + File.separator
@@ -413,7 +374,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
             final MavenExecution execution = verifier.forProject(workDir) //
                     // .withCliOption("-X") //
                     .withCliOption("-B") // batch
-                    .withCliOptions("-Dmaven.repo.local=" + mvnLocalRepo.getRootDirectory().toAbsolutePath().toString()) //
+                    .withCliOptions("-Dmaven.repo.local=" + TestUtils.getMvnLocalRepo().getRootDirectory().toAbsolutePath().toString()) //
                     .withCliOption("-s").withCliOption(mrmSettingsXmlPath)
                     .withCliOption(
                             "-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn") //
@@ -437,7 +398,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogText("srcdeps: A rebuild of [org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
                             + "]] was triggered by [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch] lookup")
                     .assertLogText("srcdeps: Uninstalling [1] GAVs before rebuilding them")
-                    .assertLogTextPath("srcdeps: Uninstalling [" + mvnLocalRepoPath
+                    .assertLogTextPath("srcdeps: Uninstalling [" + TestUtils.getMvnLocalRepoPath()
                             + "/org/l2x6/maven/srcdeps/itest/srcdeps-test-artifact/0.0.1-SRC-branch-morning-branch"
                                     .replace('/', File.separatorChar))
                     .assertLogTextPath("srcdeps: Path [" + hashA84403bPath + File.separator
@@ -537,9 +498,9 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
     @Test
     public void mvnGitSnapshotRevision() throws Exception {
         log.info("Running method {}", testName.getMethodName());
-        deleteSrcdepsDirectory();
+        TestUtils.deleteSrcdepsDirectory();
 
-        PersistentBuildMetadataStore buildMetadataStore = new PersistentBuildMetadataStore(srcdepsBuildMetadataPath);
+        PersistentBuildMetadataStore buildMetadataStore = new PersistentBuildMetadataStore(TestUtils.getSrcdepsBuildMetadataPath());
         {
             PersistentBuildMetadataStore.BuildRequestIdCollector consumer = new PersistentBuildMetadataStore.BuildRequestIdCollector();
             buildMetadataStore.walkBuildRequestHashes(consumer);
@@ -573,14 +534,14 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
             repoVerifier.clean();
 
             final String quickstartRepoDir = "org/l2x6/srcdeps/quickstarts/" + project;
-            SrcdepsCoreUtils.deleteDirectory(mvnLocalRepoPath.resolve(quickstartRepoDir));
+            SrcdepsCoreUtils.deleteDirectory(TestUtils.getMvnLocalRepoPath().resolve(quickstartRepoDir));
 
             MavenExecution execution = verifier.forProject(workDir) //
                     .withCliOption("-X") //
                     .withCliOption("-B") // batch
                     .withCliOption(
                             "-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn") //
-                    .withCliOptions("-Dmaven.repo.local=" + mvnLocalRepo.getRootDirectory().toAbsolutePath().toString()) //
+                    .withCliOptions("-Dmaven.repo.local=" + TestUtils.getMvnLocalRepo().getRootDirectory().toAbsolutePath().toString()) //
                     .withCliOption("-s").withCliOption(mrmSettingsXmlPath);
             WrappedMavenExecutionResult result = new WrappedMavenExecutionResult(execution.execute("clean", "install"));
 
@@ -622,7 +583,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogText("srcdeps: Installed [5] artifacts");
 
             repoVerifier.verify();
-            final Manifest manifest = loadManifest(serviceGavts);
+            final Manifest manifest = TestUtils.loadManifest(serviceGavts);
             Assert.assertNotNull(manifest);
             Assert.assertEquals("67e9a1480f6de434e513c3ced2b4e952dce5ddc0",
                     manifest.getMainAttributes().getValue("Built-From-Git-SHA1"));
@@ -634,7 +595,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
          * The second build: malform one of the dependency artifacts and try to rebuid. A success will prove that the
          * dependency artifact got rebuilt
          */
-        Path serviceJarPath = mvnLocalRepo.resolve(serviceGavts);
+        Path serviceJarPath = TestUtils.getMvnLocalRepo().resolve(serviceGavts);
         try (OutputStream in = Files.newOutputStream(serviceJarPath)) {
             in.write(42);
         }
@@ -646,7 +607,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .withCliOption("-B") // batch
                     .withCliOption(
                             "-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn") //
-                    .withCliOptions("-Dmaven.repo.local=" + mvnLocalRepo.getRootDirectory().toAbsolutePath().toString()) //
+                    .withCliOptions("-Dmaven.repo.local=" + TestUtils.getMvnLocalRepo().getRootDirectory().toAbsolutePath().toString()) //
                     .withCliOption("-s").withCliOption(mrmSettingsXmlPath);
             WrappedMavenExecutionResult result = new WrappedMavenExecutionResult(execution.execute("clean", "install"));
             result //
@@ -666,13 +627,13 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogText(
                             "srcdeps: A rebuild of [org.l2x6.maven.srcdeps.itest:[git:https://github.com/srcdeps/srcdeps-test-artifact.git]] was triggered by [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:pom:0.0.2-SNAPSHOT] lookup")
                     .assertLogText("srcdeps: Uninstalling [3] GAVs before rebuilding them")
-                    .assertLogTextPath("srcdeps: Uninstalling [" + mvnLocalRepoPath
+                    .assertLogTextPath("srcdeps: Uninstalling [" + TestUtils.getMvnLocalRepoPath()
                             + "/org/l2x6/maven/srcdeps/itest/srcdeps-test-artifact-api/0.0.2-SNAPSHOT".replace('/',
                                     File.separatorChar))
-                    .assertLogTextPath("srcdeps: Uninstalling [" + mvnLocalRepoPath
+                    .assertLogTextPath("srcdeps: Uninstalling [" + TestUtils.getMvnLocalRepoPath()
                             + "/org/l2x6/maven/srcdeps/itest/srcdeps-test-artifact-service/0.0.2-SNAPSHOT".replace('/',
                                     File.separatorChar))
-                    .assertLogTextPath("srcdeps: Uninstalling [" + mvnLocalRepoPath
+                    .assertLogTextPath("srcdeps: Uninstalling [" + TestUtils.getMvnLocalRepoPath()
                             + "/org/l2x6/maven/srcdeps/itest/srcdeps-test-artifact/0.0.2-SNAPSHOT".replace('/',
                                     File.separatorChar))
                     .assertLogTextPath("srcdeps: Path [" + hash67e9a14Path + File.separator
@@ -690,7 +651,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogText("srcdeps: Installed [5] artifacts");
 
             repoVerifier.verify();
-            final Manifest manifest = loadManifest(serviceGavts);
+            final Manifest manifest = TestUtils.loadManifest(serviceGavts);
             Assert.assertNotNull(manifest);
             Assert.assertEquals("67e9a1480f6de434e513c3ced2b4e952dce5ddc0",
                     manifest.getMainAttributes().getValue("Built-From-Git-SHA1"));
