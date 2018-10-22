@@ -666,8 +666,10 @@ public class SrcdepsInitMojo extends SrcdepsUpgradeMojo {
 
         log.info("srcdeps: Supported SCMs: [{}]", scms);
 
-        if (skip || !multiModuleRootDir.equals(session.getCurrentProject().getBasedir())) {
-            log.info("srcdeps: "+ getClass().getSimpleName() + " skipped");
+        if (skip) {
+            log.info("srcdeps: ["+ getClass().getSimpleName() + "] skipped per skip parameter");
+        } else if (!multiModuleRootDir.equals(session.getCurrentProject().getBasedir())) {
+            log.info("srcdeps: ["+ getClass().getSimpleName() + "] skipped because multiModuleRootDir ["+ multiModuleRootDir +"] != current project basedir ["+ session.getCurrentProject().getBasedir() +"]");
         } else {
 
             Configuration.Builder config = Configuration.builder() //

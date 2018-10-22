@@ -56,7 +56,7 @@ import org.w3c.dom.Document;
 @SuppressWarnings("deprecation")
 @Mojo(name = "up", defaultPhase = LifecyclePhase.NONE, threadSafe = false, requiresProject = true, requiresDependencyResolution = ResolutionScope.NONE)
 public class SrcdepsUpgradeMojo extends AbstractMojo {
-    protected final File multiModuleRootDir = new File(System.getProperty("maven.multiModuleProjectDirectory"));
+    protected final File multiModuleRootDir = new File(System.getProperty("user.dir"));
     protected final Path mvnDir;
     protected final Path extensionsXmlPath;
 
@@ -102,8 +102,10 @@ public class SrcdepsUpgradeMojo extends AbstractMojo {
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
         final Log log = getLog();
-        if (skip || !multiModuleRootDir.equals(session.getCurrentProject().getBasedir())) {
-            log.info("srcdeps: ["+ getClass().getSimpleName() + "] skipped");
+        if (skip) {
+            log.info("srcdeps: ["+ getClass().getSimpleName() + "] skipped per skip parameter");
+        } else if (!multiModuleRootDir.equals(session.getCurrentProject().getBasedir())) {
+            log.info("srcdeps: ["+ getClass().getSimpleName() + "] skipped because multiModuleRootDir ["+ multiModuleRootDir +"] != current project basedir ["+ session.getCurrentProject().getBasedir() +"]");
         } else {
 
             if (newVersion == null || newVersion.isEmpty()) {
