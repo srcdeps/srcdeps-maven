@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2018 Maven Source Dependencies
+ * Copyright 2015-2019 Maven Source Dependencies
  * Plugin contributors as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -322,6 +322,26 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
             ;
         }
         repoVerifier.verify();
+    }
+
+    @Test
+    public void mvnGitIncludeRequired() throws Exception {
+
+        final String project = "srcdeps-mvn-git-include-required-quickstart";
+        final String srcVersion = "0.0.1-SRC-tag-0.0.1-5657";
+
+        String[] expectedGavtcs = new String[] { //
+                pom(groupId(project), project, QUICKSTART_VERSION), //
+                pomJar(groupId(project), project + "-jar", QUICKSTART_VERSION), //
+                pom(ORG_L2X6_MAVEN_SRCDEPS_ITEST_GROUPID, "srcdeps-test-artifact", srcVersion), //
+                pomJar(ORG_L2X6_MAVEN_SRCDEPS_ITEST_GROUPID, "srcdeps-test-artifact-api", srcVersion), //
+        };
+
+        String[] unexpectedGavtcs = new String[] { //
+                pomJar(ORG_L2X6_MAVEN_SRCDEPS_ITEST_GROUPID, "srcdeps-test-artifact-service", srcVersion) //
+        };
+
+        assertBuild(project, expectedGavtcs, unexpectedGavtcs, "clean", "install");
     }
 
     @Test

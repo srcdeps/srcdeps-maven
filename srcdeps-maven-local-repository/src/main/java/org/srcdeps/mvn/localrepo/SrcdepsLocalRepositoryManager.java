@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2018 Maven Source Dependencies
+ * Copyright 2015-2019 Maven Source Dependencies
  * Plugin contributors as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,12 +17,16 @@
 package org.srcdeps.mvn.localrepo;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.Artifact;
@@ -49,11 +53,14 @@ import org.srcdeps.core.FetchLog;
 import org.srcdeps.core.Gav;
 import org.srcdeps.core.GavSet;
 import org.srcdeps.core.GavSetWalker;
+import org.srcdeps.core.MavenSourceTree;
+import org.srcdeps.core.MavenSourceTree.Module;
 import org.srcdeps.core.ScmService;
 import org.srcdeps.core.SrcVersion;
 import org.srcdeps.core.config.BuilderIo;
 import org.srcdeps.core.config.Configuration;
 import org.srcdeps.core.config.ScmRepository;
+import org.srcdeps.core.config.ScmRepositoryMaven;
 import org.srcdeps.core.fs.BuildDirectoriesManager;
 import org.srcdeps.core.fs.PathLock;
 import org.srcdeps.core.fs.PathLocker;
@@ -195,6 +202,10 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                 List<String> buildArgs = enhanceBuildArguments(scmRepo.getBuildArguments(),
                         delegate.getRepository().getBasedir().getAbsolutePath());
                 scmRepoId = scmRepo.getId();
+                final ScmRepositoryMaven maven = scmRepo.getMaven();
+                final Set<String> buildIncludes = collectBuildIncludes(
+                        configurationProducer.getMultimoduleProjectRootDirectory(), scmRepo.getGavSet(),
+                        maven.isIncludeRequired(), maven.getIncludes());
                 BuildRequest buildRequest = BuildRequest.builder() //
                         .scmRepositoryId(scmRepo.getId()) //
                         .dependentProjectRootDirectory(configurationProducer.getMultimoduleProjectRootDirectory()) //
@@ -210,7 +221,9 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                         .addDefaultBuildArguments(scmRepo.isAddDefaultBuildArguments()) //
                         .verbosity(scmRepo.getVerbosity()) //
                         .ioRedirects(ioRedirects) //
-                        .versionsMavenPluginVersion(scmRepo.getMaven().getVersionsMavenPluginVersion())
+                        .versionsMavenPluginVersion(maven.getVersionsMavenPluginVersion()) //
+                        .buildIncludes(buildIncludes)
+                        .excludeNonRequired(maven.isExcludeNonRequired())
                         .gradleModelTransformer(scmRepo.getGradle().getModelTransformer()) //
                         .build();
 
@@ -246,6 +259,16 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                 /* Uninstall all matching artifacts */
                 uninstallGavSet(scmRepo, gavSetWalker);
 
+                /* Reduce the build tree if the user wants */
+                final Path pomXml = projectBuildDir.getPath().resolve("pom.xml");
+                if (Files.exists(pomXml)) {
+                    final MavenSourceTree depTree = MavenSourceTree.of(pomXml , StandardCharsets.UTF_8);
+                    if (!buildIncludes.isEmpty() && buildRequest.isExcludeNonRequired()) {
+                        Set<String> includesClosure = depTree.computeModuleClosure(buildIncludes);
+                        depTree.unlinkUneededModules(includesClosure);
+                    }
+                }
+
                 buildService.build(buildRequest);
 
                 buildMetadataStore.storeCommitId(buildRequestHash, sourceTreeCommitId);
@@ -266,6 +289,30 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
 
         } catch (BuildException | IOException e) {
             log.error("srcdeps: Could not build [" + scmRepoId + "] using request [" + request + "]", e);
+        }
+        return result;
+    }
+
+    private Set<String> collectBuildIncludes(Path dependentProjectRoot, GavSet gavSet, boolean includeRequired, List<String> includes) {
+        final Set<String> result = new TreeSet<>(includes);
+        final Path pomXml = dependentProjectRoot.resolve("pom.xml");
+        if (includeRequired && Files.exists(pomXml)) {
+            final MavenSourceTree mst = MavenSourceTree.of(pomXml , StandardCharsets.UTF_8);
+            for (Module module : mst.getModulesByGa().values()) {
+                final String parentGa = module.getParentGa();
+                if (parentGa != null) {
+                    final String[] ga = parentGa.split(":");
+                    if (gavSet.contains(ga[0], ga[1])) {
+                        result.add(parentGa);
+                    }
+                }
+                for (String depGa : module.getDependencies()) {
+                    final String[] ga = depGa.split(":");
+                    if (gavSet.contains(ga[0], ga[1])) {
+                        result.add(depGa);
+                    }
+                }
+            }
         }
         return result;
     }
