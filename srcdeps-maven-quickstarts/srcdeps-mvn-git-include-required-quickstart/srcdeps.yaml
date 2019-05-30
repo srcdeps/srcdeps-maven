@@ -16,21 +16,12 @@
 #
 
 configModelVersion: 2.4
-forwardAsMasterConfig: true
 repositories:
-  org.srcdeps.mvn.quickstarts.srcdeps-mvn-git-master-config.hello:
+  org.l2x6.maven.srcdeps.itest:
     includes:
-    - org.srcdeps.mvn.quickstarts.srcdeps-mvn-git-master-config.hello
+    - org.l2x6.maven.srcdeps.itest
     urls:
-    - ${hello.git.url}
-    buildVersionPattern: .*-srcdeps
-    buildRef: revision-${hello.git.revision}
-    verbosity: info
-  org.srcdeps.mvn.quickstarts.srcdeps-mvn-git-master-config.hello-decorator:
-    includes:
-    - org.srcdeps.mvn.quickstarts.srcdeps-mvn-git-master-config.hello-decorator
-    urls:
-    - ${hello-decorator.git.url}
-    buildVersionPattern: .*-srcdeps
-    buildRef: revision-${hello-decorator.git.revision}
-    verbosity: info
+    - git:https://github.com/srcdeps/srcdeps-test-artifact.git
+    maven:
+      includeRequired: true
+      excludeNonRequired: true

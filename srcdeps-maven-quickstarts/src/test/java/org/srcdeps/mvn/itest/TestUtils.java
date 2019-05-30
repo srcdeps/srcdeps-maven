@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2018 Maven Source Dependencies
+ * Copyright 2015-2019 Maven Source Dependencies
  * Plugin contributors as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,7 +67,7 @@ public class TestUtils {
     }
 
     public static Path createSourceTreesTestRunPath() throws IOException {
-        final String subdir = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) + "-"
+        final String subdir = LocalDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME).replace(':', '-') + "-"
                 + ((int) (Math.random() * 1000));
         final Path result = dependencySourceTreesPath.resolve(subdir);
         Files.createDirectories(result);

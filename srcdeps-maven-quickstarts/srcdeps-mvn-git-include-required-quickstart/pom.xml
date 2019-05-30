@@ -21,14 +21,15 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>org.srcdeps.mvn.quickstarts.srcdeps-mvn-git-snapshot-quickstart</groupId>
-  <artifactId>srcdeps-mvn-git-snapshot-quickstart</artifactId>
+  <groupId>org.srcdeps.mvn.quickstarts.srcdeps-mvn-git-include-required-quickstart</groupId>
+  <artifactId>srcdeps-mvn-git-include-required-quickstart</artifactId>
   <version>1.0-SNAPSHOT</version>
   <packaging>pom</packaging>
-  <description>A Maven project containing a dependency on a source revision of another Maven project</description>
+  <description>A simple IT verifying the basic use case.</description>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <version.org.l2x6.maven.srcdeps.itest>0.0.1-SRC-tag-0.0.1-5657</version.org.l2x6.maven.srcdeps.itest>
   </properties>
 
   <modules>
@@ -37,20 +38,11 @@
 
   <dependencyManagement>
     <dependencies>
-
       <dependency>
-        <!-- This groupId is mapped to git:https://github.com/srcdeps/srcdeps-test-artifact.git repository in srcdeps.yaml -->
         <groupId>org.l2x6.maven.srcdeps.itest</groupId>
-        <artifactId>srcdeps-test-artifact-service</artifactId>
-        <version>0.0.2-SNAPSHOT</version>
+        <artifactId>srcdeps-test-artifact-api</artifactId>
+        <version>${version.org.l2x6.maven.srcdeps.itest}</version>
       </dependency>
-
-      <dependency>
-        <groupId>junit</groupId>
-        <artifactId>junit</artifactId>
-        <version>4.12</version>
-      </dependency>
-
     </dependencies>
   </dependencyManagement>
 
