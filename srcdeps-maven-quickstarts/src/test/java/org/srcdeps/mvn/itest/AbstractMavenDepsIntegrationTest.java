@@ -1,5 +1,5 @@
 /**
- * Copyright 2015-2018 Maven Source Dependencies
+ * Copyright 2015-2019 Maven Source Dependencies
  * Plugin contributors as indicated by the @author tags.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,6 +26,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -52,7 +55,8 @@ public abstract class AbstractMavenDepsIntegrationTest {
     @BeforeClass
     public static void beforeClass() throws IOException {
         final Path mvnLocalRepoPath = TestUtils.getMvnLocalRepo().getRootDirectory();
-        final Path takariLocalRepoDir = mvnLocalRepoPath.resolve("io/takari");
+        /* Deletion of these is know to fail on Windows and they are not important for the correctness of the test results */
+        final Set<Path> skippedDirs = new LinkedHashSet<>(Arrays.asList(mvnLocalRepoPath.resolve("io/takari"), mvnLocalRepoPath.resolve("org/srcdeps/core/srcdeps-core")));
         if (Files.exists(mvnLocalRepoPath)) {
             try (DirectoryStream<Path> subPaths = Files.newDirectoryStream(mvnLocalRepoPath)) {
                 for (Path subPath : subPaths) {
@@ -63,10 +67,10 @@ public abstract class AbstractMavenDepsIntegrationTest {
                             public FileVisitResult postVisitDirectory(Path d, IOException exc) throws IOException {
                                 if (exc == null) {
                                     final FileVisitResult result;
-                                    if (!takariLocalRepoDir.startsWith(d)) {
+                                    if (skippedDirs.stream().allMatch(p -> !p.startsWith(d))) {
                                         Files.delete(d);
                                         result = FileVisitResult.CONTINUE;
-                                    } else if (takariLocalRepoDir.equals(d)) {
+                                    } else if (skippedDirs.stream().anyMatch(p -> p.equals(d))) {
                                         result = FileVisitResult.SKIP_SUBTREE;
                                     } else {
                                         result = FileVisitResult.CONTINUE;
@@ -81,7 +85,7 @@ public abstract class AbstractMavenDepsIntegrationTest {
                             @Override
                             public FileVisitResult preVisitDirectory(Path d, BasicFileAttributes attrs)
                                     throws IOException {
-                                final FileVisitResult result = d.equals(takariLocalRepoDir) ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
+                                final FileVisitResult result = skippedDirs.stream().anyMatch(p -> p.equals(d)) ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
                                 return result ;
                             }
 
