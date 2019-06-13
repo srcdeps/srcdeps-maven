@@ -28,7 +28,7 @@
 
   <groupId>org.srcdeps.mvn</groupId>
   <artifactId>srcdeps-maven-parent</artifactId>
-  <version>3.6.0</version>
+  <version>3.6.1-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Srcdeps Maven Parent</name>
@@ -63,7 +63,7 @@
     <connection>scm:git:git@github.com:srcdeps/srcdeps-maven.git</connection>
     <developerConnection>scm:git:git@github.com:srcdeps/srcdeps-maven.git</developerConnection>
     <url>https://github.com/srcdeps/srcdeps-maven</url>
-    <tag>3.6.0</tag>
+    <tag>head</tag>
   </scm>
   <issueManagement>
     <system>GitHub Issues</system>
@@ -181,27 +181,27 @@
       <dependency>
         <groupId>org.srcdeps.mvn</groupId>
         <artifactId>srcdeps-maven-local-repository</artifactId>
-        <version>3.6.0</version>
+        <version>3.6.1-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>org.srcdeps.mvn</groupId>
         <artifactId>srcdeps-maven-base</artifactId>
-        <version>3.6.0</version>
+        <version>3.6.1-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>org.srcdeps.mvn</groupId>
         <artifactId>srcdeps-maven-enforcer</artifactId>
-        <version>3.6.0</version>
+        <version>3.6.1-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>org.srcdeps.mvn</groupId>
         <artifactId>srcdeps-maven-plugin</artifactId>
-        <version>3.6.0</version>
+        <version>3.6.1-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>org.srcdeps.mvn</groupId>
         <artifactId>srcdeps-maven-quickstarts</artifactId>
-        <version>3.6.0</version>
+        <version>3.6.1-SNAPSHOT</version>
       </dependency>
 
       <dependency>
