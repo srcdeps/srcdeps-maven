@@ -17,6 +17,7 @@
 package org.srcdeps.mvn.localrepo;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,6 +28,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Predicate;
 
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.Artifact;
@@ -50,11 +52,13 @@ import org.srcdeps.core.ConfigurationQueryService;
 import org.srcdeps.core.ConfigurationQueryService.ScmRepositoryResult;
 import org.srcdeps.core.FetchId;
 import org.srcdeps.core.FetchLog;
+import org.srcdeps.core.Ga;
 import org.srcdeps.core.Gav;
 import org.srcdeps.core.GavSet;
 import org.srcdeps.core.GavSetWalker;
 import org.srcdeps.core.MavenSourceTree;
-import org.srcdeps.core.MavenSourceTree.Module;
+import org.srcdeps.core.MavenSourceTree.ActiveProfiles;
+import org.srcdeps.core.MavenSourceTree.Module.Profile;
 import org.srcdeps.core.ScmService;
 import org.srcdeps.core.SrcVersion;
 import org.srcdeps.core.config.BuilderIo;
@@ -203,11 +207,14 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                         delegate.getRepository().getBasedir().getAbsolutePath());
                 scmRepoId = scmRepo.getId();
                 final ScmRepositoryMaven maven = scmRepo.getMaven();
-                final Set<String> buildIncludes = collectBuildIncludes(
-                        configurationProducer.getMultimoduleProjectRootDirectory(), scmRepo.getGavSet(),
-                        maven.isIncludeRequired(), maven.getIncludes());
+
+                final Predicate<Profile> isProfileActive = ActiveProfiles.ofArgs(buildArgs);
+                final Set<Ga> buildIncludes = collectBuildIncludes(
+                        configurationProducer.getMultimoduleProjectRootDirectory(), scmRepo.getEncoding(), scmRepo.getGavSet(),
+                        maven.isIncludeRequired(), maven.getIncludes(), isProfileActive);
                 BuildRequest buildRequest = BuildRequest.builder() //
                         .scmRepositoryId(scmRepo.getId()) //
+                        .encoding(scmRepo.getEncoding()) //
                         .dependentProjectRootDirectory(configurationProducer.getMultimoduleProjectRootDirectory()) //
                         .projectRootDirectory(projectBuildDir.getPath()) //
                         .scmUrls(scmRepo.getUrls()) //
@@ -264,8 +271,8 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                 if (Files.exists(pomXml)) {
                     final MavenSourceTree depTree = MavenSourceTree.of(pomXml , StandardCharsets.UTF_8);
                     if (!buildIncludes.isEmpty() && buildRequest.isExcludeNonRequired()) {
-                        Set<String> includesClosure = depTree.computeModuleClosure(buildIncludes);
-                        depTree.unlinkUneededModules(includesClosure);
+                        Set<Ga> includesClosure = depTree.computeModuleClosure(buildIncludes, isProfileActive);
+                        depTree.unlinkUneededModules(includesClosure, isProfileActive);
                     }
                 }
 
@@ -275,7 +282,7 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                 BuildMetadataStore.StoreSha1Consumer gavtcPathConsumer = buildMetadataStore
                         .createStoreSha1Consumer(buildRequestHash);
                 gavSetWalker.walk(gavtcPathConsumer);
-                log.debug("srcdeps: Installed [{}] artifacts", gavtcPathConsumer.getCount());
+                log.debug("srcdeps: Installed [{}] artifacts to [{}]", gavtcPathConsumer.getCount(), localMavenRepoPath);
 
                 /* check once again if the delegate sees the newly built artifact */
                 final LocalArtifactResult newResult = delegate.find(session, request);
@@ -293,26 +300,13 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
         return result;
     }
 
-    private Set<String> collectBuildIncludes(Path dependentProjectRoot, GavSet gavSet, boolean includeRequired, List<String> includes) {
-        final Set<String> result = new TreeSet<>(includes);
+    private Set<Ga> collectBuildIncludes(Path dependentProjectRoot, Charset encoding, GavSet gavSet, boolean includeRequired, List<String> includes, Predicate<Profile> isProfileActive) {
+        final Set<Ga> result = new TreeSet<>();
+        includes.stream().map(Ga::of).forEach(result::add);
         final Path pomXml = dependentProjectRoot.resolve("pom.xml");
         if (includeRequired && Files.exists(pomXml)) {
-            final MavenSourceTree mst = MavenSourceTree.of(pomXml , StandardCharsets.UTF_8);
-            for (Module module : mst.getModulesByGa().values()) {
-                final String parentGa = module.getParentGa();
-                if (parentGa != null) {
-                    final String[] ga = parentGa.split(":");
-                    if (gavSet.contains(ga[0], ga[1])) {
-                        result.add(parentGa);
-                    }
-                }
-                for (String depGa : module.getDependencies()) {
-                    final String[] ga = depGa.split(":");
-                    if (gavSet.contains(ga[0], ga[1])) {
-                        result.add(depGa);
-                    }
-                }
-            }
+            final MavenSourceTree mst = MavenSourceTree.of(pomXml, encoding);
+            result.addAll(mst.filterDependencies(gavSet, isProfileActive));
         }
         return result;
     }
