@@ -56,7 +56,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
         super(runtimeBuilder);
     }
 
-    // @Test
+    @Test
     public void mvnGitBom() throws Exception {
 
         final String project = "srcdeps-mvn-git-bom-quickstart";
@@ -339,7 +339,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
         repoVerifier.verify();
     }
 
-    // @Test
+    @Test
     public void mvnGitIncludeRequired() throws Exception {
 
         final String project = "srcdeps-mvn-git-include-required-quickstart";
@@ -359,7 +359,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
         assertBuild(project, expectedGavtcs, unexpectedGavtcs, "clean", "install");
     }
 
-    // @Test
+    @Test
     public void mvnGitInterdepModules() throws Exception {
 
         final String project = "srcdeps-mvn-git-interdep-modules-quickstart";
@@ -376,7 +376,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
         assertBuild(project, expectedGavtcs, new String[] {}, "clean", "install");
     }
 
-    // @Test
+    @Test
     public void mvnGitParent() throws Exception {
 
         final String project = "srcdeps-mvn-git-parent-quickstart";
@@ -392,7 +392,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
         assertBuild(project, expectedGavtcs, new String[] {}, "clean", "install");
     }
 
-    // @Test
+    @Test
     public void mvnGitProfileAndProperties() throws Exception {
         final String project = "srcdeps-mvn-git-profile-and-properties-quickstart";
         final String srcVersion = "0.0.1-SRC-revision-834947e286f1f59bd6c5c3ca3823f4656bc9345b";
@@ -410,7 +410,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
         assertBuild(project, expectedGavtcs, unexpectedGavtcs, "clean", "test");
     }
 
-    // @Test
+    @Test
     public void mvnGitRevision() throws Exception {
         final String project = "srcdeps-mvn-git-revision-quickstart";
         final String srcVersion = "0.0.1-SRC-revision-66ea95d890531f4eaaa5aa04a9b1c69b409dcd0b";
@@ -423,7 +423,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
         assertBuild(project, expectedGavtcs, new String[] {}, "clean", "install");
     }
 
-    // @Test
+    @Test
     public void mvnGitRevisionNonMaster() throws Exception {
         final String project = "srcdeps-mvn-git-revision-non-master-quickstart";
         final String srcVersion = "0.0.1-SRC-revision-dbad2cdc30b5bb3ff62fc89f57987689a5f3c220";
@@ -437,7 +437,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
         assertBuild(project, expectedGavtcs, new String[] {}, "clean", "install");
     }
 
-    // @Test
+    @Test
     public void mvnGitSnapshotRevision() throws Exception {
         TestUtils.deleteSrcdepsDirectory();
 
@@ -604,7 +604,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
 
     }
 
-    // @Test
+    @Test
     public void mvnGitTag() throws Exception {
         final String project = "srcdeps-mvn-git-tag-quickstart";
         final String srcVersion = "0.0.1-SRC-tag-0.0.1";
@@ -618,7 +618,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
         assertBuild(project, expectedGavtcs, new String[] {}, "clean", "install");
     }
 
-    // @Test
+    @Test
     public void mvnwGit() throws Exception {
         final String project = "srcdeps-mvnw-git-quickstart";
         final String srcVersion = "0.0.2-SRC-revision-dc21a1375bd5388b5489621e71dbe6e0e70db200";

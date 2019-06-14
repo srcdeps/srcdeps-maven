@@ -25,7 +25,7 @@ repositories:
     - ${hello.git.url}
     buildVersionPattern: .*-srcdeps
     buildRef: revision-${hello.git.revision}
-    verbosity: debug
+    verbosity: info
   org.srcdeps.mvn.quickstarts.srcdeps-mvn-git-master-config.hello-decorator:
     includes:
     - org.srcdeps.mvn.quickstarts.srcdeps-mvn-git-master-config.hello-decorator
@@ -33,4 +33,4 @@ repositories:
     - ${hello-decorator.git.url}
     buildVersionPattern: .*-srcdeps
     buildRef: revision-${hello-decorator.git.revision}
-    verbosity: debug
+    verbosity: info
