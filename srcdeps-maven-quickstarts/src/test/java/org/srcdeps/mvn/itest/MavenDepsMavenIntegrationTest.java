@@ -165,12 +165,12 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogText("srcdeps: Fetching version [0.0.1-SRC-branch-morning-branch] from SCM URL 1/1 ["
                             + localGitRepoUri + "]") //
                     .assertLogText(
-                            "srcdeps: Mapped artifact [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch] to revision [a84403b6fb44c5a588a9fe39d939c977e1e5c6a4") //
+                            "srcdeps[org.l2x6.maven.srcdeps.itest]: Mapped artifact [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch] to revision [a84403b6fb44c5a588a9fe39d939c977e1e5c6a4") //
                     .assertLogTextPath(
                             "srcdeps: commitId path [" + hashA84403bPath + File.separator + "commitId] does not exist") //
-                    .assertLogText("srcdeps: A rebuild of [org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
+                    .assertLogText("srcdeps[org.l2x6.maven.srcdeps.itest]: A rebuild of [org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
                             + "]] was triggered by [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch] lookup") //
-                    .assertLogText("srcdeps: Uninstalling [0] GAVs before rebuilding them") //
+                    .assertLogText("srcdeps[org.l2x6.maven.srcdeps.itest]: Uninstalling [0] GAVs before rebuilding them") //
 
                     .assertLogTextPath("srcdeps: Path [" + hashA84403bPath + File.separator
                             + "commitId] will point at commitId [a84403b6fb44c5a588a9fe39d939c977e1e5c6a4]") //
@@ -178,8 +178,8 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                             + "org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact_0.0.1-SRC-branch-morning-branch_pom] will point at sha1 ["+ pomSha1 +"]") //
                     .assertLogTextPath("srcdeps: Path [" + hashA84403bPath + File.separator
                             + "org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact_0.0.1-SRC-branch-morning-branch_jar] will point at sha1 ["+ jarSha1 +"]") //
-                    .assertLogText("srcdeps: Installed [2] artifacts") //
-                    .assertLogText("srcdeps: SCM repository [org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
+                    .assertLogText("srcdeps[org.l2x6.maven.srcdeps.itest]: Installed [2] artifacts") //
+                    .assertLogText("srcdeps[org.l2x6.maven.srcdeps.itest]: SCM repository [org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
                             + "]] has been marked as built and up-to-date in this JVM. The artifact [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:jar:0.0.1-SRC-branch-morning-branch] must be there in the local maven repository") //
 
             ;
@@ -212,7 +212,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogText("srcdeps: Fetching version [0.0.1-SRC-branch-morning-branch] from SCM URL 1/1 ["
                             + localGitRepoUri + "]") //
                     .assertLogText(
-                            "srcdeps: Mapped artifact [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch] to revision [a84403b6fb44c5a588a9fe39d939c977e1e5c6a4] via [0.0.1-SRC-branch-morning-branch") //
+                            "srcdeps[org.l2x6.maven.srcdeps.itest]: Mapped artifact [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch] to revision [a84403b6fb44c5a588a9fe39d939c977e1e5c6a4] via [0.0.1-SRC-branch-morning-branch") //
                     .assertLogTextPath("srcdeps: Path [" + hashA84403bPath + File.separator
                             + "commitId] points at commitId [a84403b6fb44c5a588a9fe39d939c977e1e5c6a4]") //
                     .assertLogTextPath("srcdeps: Path [" + hashA84403bPath + File.separator
@@ -220,10 +220,10 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogTextPath("srcdeps: Path [" + hashA84403bPath + File.separator
                             + "org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact_0.0.1-SRC-branch-morning-branch_jar] points at sha1 ["+ jarSha1 +"]") //
                     .assertLogText(
-                            "srcdeps: The artifact in the local Maven repo has not changed since we built it in the past: [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch")
+                            "srcdeps[org.l2x6.maven.srcdeps.itest]: The artifact in the local Maven repo has not changed since we built it in the past: [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch")
 
                     /* there should be no dependency rebuild in the second build */
-                    .assertNoLogText("srcdeps: A rebuild of") //
+                    .assertNoLogText("srcdeps[org.l2x6.maven.srcdeps.itest]: A rebuild of") //
             ;
         }
         repoVerifier.verify();
@@ -264,14 +264,14 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogText("srcdeps: Fetching version [0.0.1-SRC-branch-morning-branch] from SCM URL 1/1 ["
                             + localGitRepoUri + "]") //
                     .assertLogText(
-                            "srcdeps: Mapped artifact [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch] to revision ["
+                            "srcdeps[org.l2x6.maven.srcdeps.itest]: Mapped artifact [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch] to revision ["
                                     + expectedCommitId) //
                     .assertLogTextPath("srcdeps: Path [" + hashA84403bPath + File.separator
                             + "commitId] points at commitId [a84403b6fb44c5a588a9fe39d939c977e1e5c6a4]")
-                    .assertLogText("srcdeps: A rebuild of [org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
+                    .assertLogText("srcdeps[org.l2x6.maven.srcdeps.itest]: A rebuild of [org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
                             + "]] was triggered by [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch] lookup")
-                    .assertLogText("srcdeps: Uninstalling [1] GAVs before rebuilding them")
-                    .assertLogTextPath("srcdeps: Uninstalling [" + TestUtils.getMvnLocalRepoPath()
+                    .assertLogText("srcdeps[org.l2x6.maven.srcdeps.itest]: Uninstalling [1] GAVs before rebuilding them")
+                    .assertLogTextPath("srcdeps[org.l2x6.maven.srcdeps.itest]: Uninstalling [" + TestUtils.getMvnLocalRepoPath()
                             + "/org/l2x6/maven/srcdeps/itest/srcdeps-test-artifact/0.0.1-SRC-branch-morning-branch"
                                     .replace('/', File.separatorChar))
                     .assertLogTextPath("srcdeps: Path [" + hashA84403bPath + File.separator
@@ -280,7 +280,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                             + "org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact_0.0.1-SRC-branch-morning-branch_pom] will point at sha1")
                     .assertLogTextPath("srcdeps: Path [" + hashA84403bPath + File.separator
                             + "org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact_0.0.1-SRC-branch-morning-branch_jar] will point at sha1")
-                    .assertLogText("srcdeps: Installed [2] artifacts")
+                    .assertLogText("srcdeps[org.l2x6.maven.srcdeps.itest]: Installed [2] artifacts")
                     .assertNoLogText("artifact in the local Maven repo has not changed since we built it in the past");
         }
         repoVerifier.verify();
@@ -313,14 +313,14 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogText("srcdeps: Fetching version [0.0.1-SRC-branch-morning-branch] from SCM URL 1/1 ["
                             + localGitRepoUri + "]") //
                     .assertLogText(
-                            "srcdeps: Mapped artifact [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch] to revision [a84403b6fb44c5a588a9fe39d939c977e1e5c6a4") //
+                            "srcdeps[org.l2x6.maven.srcdeps.itest]: Mapped artifact [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch] to revision [a84403b6fb44c5a588a9fe39d939c977e1e5c6a4") //
 
                     .assertLogTextPath("srcdeps: Path [" + hashA84403bPath + File.separator
                             + "commitId] points at commitId [" + expectedCommitId)
-                    .assertLogText("srcdeps: A rebuild of [org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
+                    .assertLogText("srcdeps[org.l2x6.maven.srcdeps.itest]: A rebuild of [org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
                             + "]] was triggered by [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:pom:0.0.1-SRC-branch-morning-branch] lookup")
-                    .assertLogText("srcdeps: Uninstalling [1] GAVs before rebuilding them")
-                    .assertLogTextPath("srcdeps: Uninstalling [" + TestUtils.getMvnLocalRepoPath()
+                    .assertLogText("srcdeps[org.l2x6.maven.srcdeps.itest]: Uninstalling [1] GAVs before rebuilding them")
+                    .assertLogTextPath("srcdeps[org.l2x6.maven.srcdeps.itest]: Uninstalling [" + TestUtils.getMvnLocalRepoPath()
                             + "/org/l2x6/maven/srcdeps/itest/srcdeps-test-artifact/0.0.1-SRC-branch-morning-branch"
                                     .replace('/', File.separatorChar))
                     .assertLogTextPath("srcdeps: Path [" + hashA84403bPath + File.separator
@@ -329,8 +329,8 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                             + "org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact_0.0.1-SRC-branch-morning-branch_pom] will point at sha1")
                     .assertLogTextPath("srcdeps: Path [" + hashA84403bPath + File.separator
                             + "org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact_0.0.1-SRC-branch-morning-branch_jar] will point at sha1")
-                    .assertLogText("srcdeps: Installed [2] artifacts")
-                    .assertLogText("srcdeps: SCM repository [org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
+                    .assertLogText("srcdeps[org.l2x6.maven.srcdeps.itest]: Installed [2] artifacts")
+                    .assertLogText("srcdeps[org.l2x6.maven.srcdeps.itest]: SCM repository [org.l2x6.maven.srcdeps.itest:[git:" + localGitRepoUri
                             + "]] has been marked as built and up-to-date in this JVM. The artifact [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact:jar:0.0.1-SRC-branch-morning-branch] must be there in the local maven repository")
                     .assertNoLogText(
                             "srcdeps artifact in the local Maven repo has not changed since we built it in the past") //
@@ -503,14 +503,14 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogText(
                             "srcdeps: Fetching version [revision-67e9a1480f6de434e513c3ced2b4e952dce5ddc0] from SCM URL 1/1 [https://github.com/srcdeps/srcdeps-test-artifact.git]")
                     .assertLogText(
-                            "srcdeps: Mapped artifact [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:pom:0.0.2-SNAPSHOT] to revision [67e9a1480f6de434e513c3ced2b4e952dce5ddc0] via [revision-67e9a1480f6de434e513c3ced2b4e952dce5ddc0")
+                            "srcdeps[org.l2x6.maven.srcdeps.itest]: Mapped artifact [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:pom:0.0.2-SNAPSHOT] to revision [67e9a1480f6de434e513c3ced2b4e952dce5ddc0] via [revision-67e9a1480f6de434e513c3ced2b4e952dce5ddc0")
                     .assertLogText(
                             "srcdeps: Adding SCM repo to FetchLog: [org.l2x6.maven.srcdeps.itest:[git:https://github.com/srcdeps/srcdeps-test-artifact.git]]")
                     .assertLogText(
                             "srcdeps: commitId path [" + hash67e9a14Path + File.separator + "commitId] does not exist")
                     .assertLogText(
-                            "srcdeps: A rebuild of [org.l2x6.maven.srcdeps.itest:[git:https://github.com/srcdeps/srcdeps-test-artifact.git]] was triggered by [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:pom:0.0.2-SNAPSHOT] lookup")
-                    .assertLogText("srcdeps: Uninstalling [0] GAVs before rebuilding them")
+                            "srcdeps[org.l2x6.maven.srcdeps.itest]: A rebuild of [org.l2x6.maven.srcdeps.itest:[git:https://github.com/srcdeps/srcdeps-test-artifact.git]] was triggered by [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:pom:0.0.2-SNAPSHOT] lookup")
+                    .assertLogText("srcdeps[org.l2x6.maven.srcdeps.itest]: Uninstalling [0] GAVs before rebuilding them")
                     .assertLogTextPath("srcdeps: Path [" + hash67e9a14Path + File.separator
                             + "commitId] will point at commitId [67e9a1480f6de434e513c3ced2b4e952dce5ddc0]")
                     .assertLogTextPath("srcdeps: Path [" + hash67e9a14Path + File.separator
@@ -523,7 +523,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                             + "org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact-service_0.0.2-SNAPSHOT_pom] will point at sha1 ")
                     .assertLogTextPath("srcdeps: Path [" + hash67e9a14Path + File.separator
                             + "org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact-service_0.0.2-SNAPSHOT_jar] will point at sha1 ")
-                    .assertLogText("srcdeps: Installed [5] artifacts");
+                    .assertLogText("srcdeps[org.l2x6.maven.srcdeps.itest]: Installed [5] artifacts");
 
             repoVerifier.verify();
             final Manifest manifest = TestUtils.loadManifest(serviceGavts);
@@ -561,7 +561,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogText(
                             "srcdeps: Fetching version [revision-67e9a1480f6de434e513c3ced2b4e952dce5ddc0] from SCM URL 1/1 [https://github.com/srcdeps/srcdeps-test-artifact.git]")
                     .assertLogText(
-                            "srcdeps: Mapped artifact [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:pom:0.0.2-SNAPSHOT] to revision [67e9a1480f6de434e513c3ced2b4e952dce5ddc0] via [revision-67e9a1480f6de434e513c3ced2b4e952dce5ddc0")
+                            "srcdeps[org.l2x6.maven.srcdeps.itest]: Mapped artifact [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:pom:0.0.2-SNAPSHOT] to revision [67e9a1480f6de434e513c3ced2b4e952dce5ddc0] via [revision-67e9a1480f6de434e513c3ced2b4e952dce5ddc0")
                     .assertLogText(
                             "srcdeps: Adding SCM repo to FetchLog: [org.l2x6.maven.srcdeps.itest:[git:https://github.com/srcdeps/srcdeps-test-artifact.git]]")
                     .assertLogTextPath("srcdeps: Path [" + hash67e9a14Path + File.separator
@@ -569,15 +569,15 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                     .assertLogText(
                             "srcdeps: Rebuilding: sha1 of artifact [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:0.0.2-SNAPSHOT:jar] in local Maven repository differs from last known sha1 built by srcdeps")
                     .assertLogText(
-                            "srcdeps: A rebuild of [org.l2x6.maven.srcdeps.itest:[git:https://github.com/srcdeps/srcdeps-test-artifact.git]] was triggered by [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:pom:0.0.2-SNAPSHOT] lookup")
-                    .assertLogText("srcdeps: Uninstalling [3] GAVs before rebuilding them")
-                    .assertLogTextPath("srcdeps: Uninstalling [" + TestUtils.getMvnLocalRepoPath()
+                            "srcdeps[org.l2x6.maven.srcdeps.itest]: A rebuild of [org.l2x6.maven.srcdeps.itest:[git:https://github.com/srcdeps/srcdeps-test-artifact.git]] was triggered by [org.l2x6.maven.srcdeps.itest:srcdeps-test-artifact-service:pom:0.0.2-SNAPSHOT] lookup")
+                    .assertLogText("srcdeps[org.l2x6.maven.srcdeps.itest]: Uninstalling [3] GAVs before rebuilding them")
+                    .assertLogTextPath("srcdeps[org.l2x6.maven.srcdeps.itest]: Uninstalling [" + TestUtils.getMvnLocalRepoPath()
                             + "/org/l2x6/maven/srcdeps/itest/srcdeps-test-artifact-api/0.0.2-SNAPSHOT".replace('/',
                                     File.separatorChar))
-                    .assertLogTextPath("srcdeps: Uninstalling [" + TestUtils.getMvnLocalRepoPath()
+                    .assertLogTextPath("srcdeps[org.l2x6.maven.srcdeps.itest]: Uninstalling [" + TestUtils.getMvnLocalRepoPath()
                             + "/org/l2x6/maven/srcdeps/itest/srcdeps-test-artifact-service/0.0.2-SNAPSHOT".replace('/',
                                     File.separatorChar))
-                    .assertLogTextPath("srcdeps: Uninstalling [" + TestUtils.getMvnLocalRepoPath()
+                    .assertLogTextPath("srcdeps[org.l2x6.maven.srcdeps.itest]: Uninstalling [" + TestUtils.getMvnLocalRepoPath()
                             + "/org/l2x6/maven/srcdeps/itest/srcdeps-test-artifact/0.0.2-SNAPSHOT".replace('/',
                                     File.separatorChar))
                     .assertLogTextPath("srcdeps: Path [" + hash67e9a14Path + File.separator
@@ -592,7 +592,7 @@ public class MavenDepsMavenIntegrationTest extends AbstractMavenDepsIntegrationT
                             + "org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact-service_0.0.2-SNAPSHOT_pom] will point at sha1")
                     .assertLogTextPath("srcdeps: Path [" + hash67e9a14Path + File.separator
                             + "org.l2x6.maven.srcdeps.itest_srcdeps-test-artifact-service_0.0.2-SNAPSHOT_jar] will point at sha1")
-                    .assertLogText("srcdeps: Installed [5] artifacts");
+                    .assertLogText("srcdeps[org.l2x6.maven.srcdeps.itest]: Installed [5] artifacts");
 
             repoVerifier.verify();
             final Manifest manifest = TestUtils.loadManifest(serviceGavts);
