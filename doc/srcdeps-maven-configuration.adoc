@@ -28,12 +28,12 @@ of the maven project.
   <extension>
     <groupId>org.l2x6.maven.srcdeps</groupId>
     <artifactId>srcdeps-maven-local-repository</artifactId>
-    <version>3.6.1</version><!-- @srcdeps.version@ -->
+    <version>3.6.2</version><!-- @srcdeps.version@ -->
   </extension>
   <extension>
     <groupId>org.srcdeps.mvn</groupId>
     <artifactId>srcdeps-maven-enforcer</artifactId><!-- to prevent srcdeps in releases -->
-    <version>3.6.1</version><!-- @srcdeps.version@ -->
+    <version>3.6.2</version><!-- @srcdeps.version@ -->
   </extension>
 </extensions>
 ----
