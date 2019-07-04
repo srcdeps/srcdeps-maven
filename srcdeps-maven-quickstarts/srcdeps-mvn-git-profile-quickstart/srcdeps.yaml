@@ -1,5 +1,5 @@
 #
-# Copyright 2015-2018 Maven Source Dependencies
+# Copyright 2015-2019 Maven Source Dependencies
 # Plugin contributors as indicated by the @author tags.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,10 +21,7 @@
 # The full srcdeps.yaml reference can be found under https://github.com/srcdeps/srcdeps-core/tree/master/doc/srcdeps.yaml
 
 
-# `configModelVersion` exists just in case we'll have to change the schema of srcdeps.yaml in the future.
-#
-# Required, no default, only 1.0 supported at the moment
-configModelVersion: 2.4
+configModelVersion: 3.0
 
 maven:
   failWith:

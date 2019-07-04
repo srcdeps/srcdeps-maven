@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-configModelVersion: 2.4
+configModelVersion: 3.0
 repositories:
   org.l2x6.maven.srcdeps.itest:
     includes:
