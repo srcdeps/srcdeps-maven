@@ -1,5 +1,5 @@
 #
-# Copyright 2015-2018 Maven Source Dependencies
+# Copyright 2015-2019 Maven Source Dependencies
 # Plugin contributors as indicated by the @author tags.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-configModelVersion: 2.4
+configModelVersion: 3.0
 verbosity: info
 repositories:
   org.l2x6.maven.srcdeps.itest:

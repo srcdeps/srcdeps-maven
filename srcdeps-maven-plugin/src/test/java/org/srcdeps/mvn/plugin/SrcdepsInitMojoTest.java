@@ -77,7 +77,7 @@ public class SrcdepsInitMojoTest {
             "#\n" + //
             "#     mvn org.srcdeps.mvn:srcdeps-maven-plugin:init\n" + //
             "#\n" + //
-            "configModelVersion: 2.6\n" + //
+            "configModelVersion: 3.0\n" + //
             "repositories:\n" + //
             "  org.srcdeps.core:\n" + //
             "    includes:\n" + //
@@ -139,7 +139,8 @@ public class SrcdepsInitMojoTest {
         Assert.assertEquals(SRCDEPS_YAML_EXPECTED, srcdepsYamlContent);
 
         String extensionsXmlContent = new String(Files.readAllBytes(extensionsXmlPath.toPath()), "utf-8");
-        Assert.assertEquals(String.format(EXTENSIONS_XML_TEMPLATE, srcdepsVersion, srcdepsVersion), extensionsXmlContent);
+        Assert.assertEquals(String.format(EXTENSIONS_XML_TEMPLATE, srcdepsVersion, srcdepsVersion),
+                extensionsXmlContent);
     }
 
 }

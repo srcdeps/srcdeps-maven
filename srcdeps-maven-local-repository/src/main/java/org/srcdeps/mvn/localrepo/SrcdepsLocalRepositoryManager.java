@@ -29,6 +29,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import org.eclipse.aether.RepositorySystemSession;
 import org.eclipse.aether.artifact.Artifact;
@@ -61,7 +62,6 @@ import org.srcdeps.core.MavenSourceTree.ActiveProfiles;
 import org.srcdeps.core.MavenSourceTree.Module.Profile;
 import org.srcdeps.core.ScmService;
 import org.srcdeps.core.SrcVersion;
-import org.srcdeps.core.config.BuilderIo;
 import org.srcdeps.core.config.Configuration;
 import org.srcdeps.core.config.ScmRepository;
 import org.srcdeps.core.config.ScmRepositoryMaven;
@@ -69,7 +69,7 @@ import org.srcdeps.core.fs.BuildDirectoriesManager;
 import org.srcdeps.core.fs.PathLock;
 import org.srcdeps.core.fs.PathLocker;
 import org.srcdeps.core.fs.PersistentBuildMetadataStore;
-import org.srcdeps.core.shell.IoRedirects;
+import org.srcdeps.core.shell.LineConsumer;
 import org.srcdeps.core.util.SrcdepsCoreUtils;
 import org.srcdeps.mvn.config.ConfigurationProducer;
 
@@ -86,7 +86,8 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
         for (String arg : buildArguments) {
             if (arg.startsWith("-Dmaven.repo.local=")) {
                 /* We won't touch maven.repo.local set in the user's config */
-                log.debug("srcdeps[{}]: Forwarding [{}] to the nested build as set in srcdeps.yaml file", scmRepoId, arg);
+                log.debug("srcdeps[{}]: Forwarding [{}] to the nested build as set in srcdeps.yaml file", scmRepoId,
+                        arg);
                 return buildArguments;
             }
             result.add(arg);
@@ -99,31 +100,17 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
         return Collections.unmodifiableList(result);
     }
 
-    void uninstallGavSet(String scmRepoId, ScmRepository currentRepo, GavSetWalker gavSetWalker) throws IOException {
-        final GavSetWalker.GavPathCollector paths = new GavSetWalker.GavPathCollector();
-        gavSetWalker.walk(paths);
-        final Map<Path, Gav> gavPaths = paths.getGavPaths();
-        log.debug("srcdeps[{}]: Uninstalling [{}] GAVs before rebuilding them", scmRepoId, gavPaths.size());
-        final List<ScmRepository> repos = configuration.getRepositories();
-        for (Entry<Path, Gav> en : gavPaths.entrySet()) {
-            final Path gavDir = en.getKey();
-            final Gav gav = en.getValue();
-            for (ScmRepository repo : repos) {
-                if (currentRepo != repo) {
-                    if (repo.getGavSet().contains(gav.getGroupId(), gav.getArtifactId(), gav.getVersion())) {
-                        log.error(
-                                "srcdeps[{}]: Cannot rebuild because it includes artifact [{}] that is included by another SCM repository [{}]. Adjust includes/excludes of those repositories in srcdeps.yaml and retry",
-                                currentRepo.getId(), gav.toString(), repo.getId());
-                    }
-                }
-            }
-            log.debug("srcdeps[{}]: Uninstalling [{}]", scmRepoId, gavDir);
-            SrcdepsCoreUtils.deleteDirectory(gavDir);
-        }
+    private static LineConsumer loggerLineConsumer(String scmRepoId) {
+        return LineConsumer.logger(scmRepoId, LoggerFactory.getLogger("org.srcdeps.build"));
+    }
+
+    private static LineConsumer rotate(Path buildDir) {
+        final String buildDirIndex = buildDir.getFileName().toString();
+        final Path logFilePath = buildDir.getParent().resolve(buildDirIndex + "-log.txt");
+        return LineConsumer.rotate(logFilePath, 4);
     }
 
     private final BuildDirectoriesManager buildDirectoriesManager;
-
     private final BuildMetadataStore buildMetadataStore;
     private final BuildService buildService;
     private final Configuration configuration;
@@ -181,9 +168,10 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
             return result;
         }
 
-        String scmRepoId = null;
+        final String scmRepoId = scmRepo.getId();
 
-        try (PathLock projectBuildDir = buildDirectoriesManager.openBuildDirectory(scmRepo.getIdAsPath(), srcVersion)) {
+        try (PathLock projectBuildDir = buildDirectoriesManager.openBuildDirectory(scmRepo.getId(),
+                scmRepo.getIdAsPath(), srcVersion)) {
 
             /* query the delegate again, because things may have changed since we requested the lock */
             final LocalArtifactResult result2 = delegate.find(session, request);
@@ -196,14 +184,6 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
             } else {
                 /* The repo has not been fetched in the current JVM yet */
 
-                BuilderIo builderIo = scmRepo.getBuilderIo();
-                IoRedirects ioRedirects = IoRedirects.builder() //
-                        .stdin(IoRedirects.parseUri(builderIo.getStdin())) //
-                        .stdout(IoRedirects.parseUri(builderIo.getStdout())) //
-                        .stderr(IoRedirects.parseUri(builderIo.getStderr())) //
-                        .build();
-
-                scmRepoId = scmRepo.getId();
                 List<String> buildArgs = enhanceBuildArguments(scmRepoId, scmRepo.getBuildArguments(),
                         delegate.getRepository().getBasedir().getAbsolutePath());
                 final ScmRepositoryMaven maven = scmRepo.getMaven();
@@ -215,6 +195,17 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                 final Set<Ga> buildIncludes = collectBuildIncludes(scmRepoId,
                         configurationProducer.getMultimoduleProjectRootDirectory(), scmRepo.getEncoding(),
                         scmRepo.getGavSet(), maven.isIncludeRequired(), maven.getIncludes(), isProfileActive);
+                final Supplier<LineConsumer> output;
+                if (scmRepo.isLogToFile() && scmRepo.isLogToConsole()) {
+                    output = () -> LineConsumer.tee(loggerLineConsumer(scmRepoId), rotate(projectBuildDir.getPath()));
+                } else if (scmRepo.isLogToFile()) {
+                    output = () -> rotate(projectBuildDir.getPath());
+                } else if (scmRepo.isLogToConsole()) {
+                    output = () -> loggerLineConsumer(scmRepoId);
+                } else {
+                    output = () -> LineConsumer.dummy();
+                }
+
                 BuildRequest buildRequest = BuildRequest.builder() //
                         .scmRepositoryId(scmRepo.getId()) //
                         .encoding(scmRepo.getEncoding()) //
@@ -230,28 +221,27 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                         .forwardPropertyValues(configuration.getForwardPropertyValues()) //
                         .addDefaultBuildArguments(scmRepo.isAddDefaultBuildArguments()) //
                         .verbosity(scmRepo.getVerbosity()) //
-                        .ioRedirects(ioRedirects) //
+                        .output(output) //
                         .versionsMavenPluginVersion(maven.getVersionsMavenPluginVersion()) //
-                        .useVersionsMavenPlugin(maven.isUseVersionsMavenPlugin())
-                        .buildIncludes(buildIncludes)
+                        .useVersionsMavenPlugin(maven.isUseVersionsMavenPlugin()).buildIncludes(buildIncludes)
                         .excludeNonRequired(maven.isExcludeNonRequired())
                         .gradleModelTransformer(scmRepo.getGradle().getModelTransformer()) //
                         .build();
 
                 final String buildRequestHash = buildRequest.getHash();
                 final String sourceTreeCommitId = scmService.checkout(buildRequest);
-                log.info("srcdeps[{}]: Mapped artifact [{}] to revision [{}] via [{}]", scmRepoId, artifact, sourceTreeCommitId,
-                        srcVersion);
+                log.info("srcdeps[{}]: Mapped artifact [{}] to revision [{}] via [{}]", scmRepoId, artifact,
+                        sourceTreeCommitId, srcVersion);
                 fetchLog.add(fetchId);
 
-                final String pastCommitId = buildMetadataStore.retrieveCommitId(buildRequestHash);
+                final String pastCommitId = buildMetadataStore.retrieveCommitId(scmRepoId, buildRequestHash);
                 final Path localMavenRepoPath = delegate.getRepository().getBasedir().toPath();
                 final GavSet gavSet = scmRepo.getGavSet();
                 final GavSetWalker gavSetWalker = new GavSetWalker(localMavenRepoPath, gavSet, version);
                 if (result2.isAvailable() && sourceTreeCommitId.equals(pastCommitId)) {
 
                     BuildMetadataStore.CheckSha1Consumer checkSha1Consumer = buildMetadataStore
-                            .createCheckSha1Checker(buildRequestHash);
+                            .createCheckSha1Checker(scmRepoId, buildRequestHash);
                     gavSetWalker.walk(checkSha1Consumer);
                     if (!checkSha1Consumer.isAnyArtifactChanged()) {
                         /*
@@ -273,7 +263,7 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
                 /* Reduce the build tree if the user wants */
                 final Path pomXml = projectBuildDir.getPath().resolve("pom.xml");
                 if (Files.exists(pomXml)) {
-                    final MavenSourceTree depTree = MavenSourceTree.of(pomXml , StandardCharsets.UTF_8);
+                    final MavenSourceTree depTree = MavenSourceTree.of(pomXml, StandardCharsets.UTF_8);
                     if (!buildIncludes.isEmpty() && buildRequest.isExcludeNonRequired()) {
                         Set<Ga> includesClosure = depTree.computeModuleClosure(buildIncludes, isProfileActive);
                         log.info("srcdeps[{}]: Closure of required includes: {}", scmRepoId, includesClosure);
@@ -283,11 +273,12 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
 
                 buildService.build(buildRequest);
 
-                buildMetadataStore.storeCommitId(buildRequestHash, sourceTreeCommitId);
+                buildMetadataStore.storeCommitId(scmRepoId, buildRequestHash, sourceTreeCommitId);
                 BuildMetadataStore.StoreSha1Consumer gavtcPathConsumer = buildMetadataStore
-                        .createStoreSha1Consumer(buildRequestHash);
+                        .createStoreSha1Consumer(scmRepoId, buildRequestHash);
                 gavSetWalker.walk(gavtcPathConsumer);
-                log.debug("srcdeps[{}]: Installed [{}] artifacts to [{}]", scmRepoId, gavtcPathConsumer.getCount(), localMavenRepoPath);
+                log.debug("srcdeps[{}]: Installed [{}] artifacts to [{}]", scmRepoId, gavtcPathConsumer.getCount(),
+                        localMavenRepoPath);
 
                 /* check once again if the delegate sees the newly built artifact */
                 final LocalArtifactResult newResult = delegate.find(session, request);
@@ -398,6 +389,29 @@ public class SrcdepsLocalRepositoryManager implements LocalRepositoryManager {
     @Override
     public LocalRepository getRepository() {
         return delegate.getRepository();
+    }
+
+    void uninstallGavSet(String scmRepoId, ScmRepository currentRepo, GavSetWalker gavSetWalker) throws IOException {
+        final GavSetWalker.GavPathCollector paths = new GavSetWalker.GavPathCollector();
+        gavSetWalker.walk(paths);
+        final Map<Path, Gav> gavPaths = paths.getGavPaths();
+        log.debug("srcdeps[{}]: Uninstalling [{}] GAVs before rebuilding them", scmRepoId, gavPaths.size());
+        final List<ScmRepository> repos = configuration.getRepositories();
+        for (Entry<Path, Gav> en : gavPaths.entrySet()) {
+            final Path gavDir = en.getKey();
+            final Gav gav = en.getValue();
+            for (ScmRepository repo : repos) {
+                if (currentRepo != repo) {
+                    if (repo.getGavSet().contains(gav.getGroupId(), gav.getArtifactId(), gav.getVersion())) {
+                        log.error(
+                                "srcdeps[{}]: Cannot rebuild because it includes artifact [{}] that is included by another SCM repository [{}]. Adjust includes/excludes of those repositories in srcdeps.yaml and retry",
+                                currentRepo.getId(), gav.toString(), repo.getId());
+                    }
+                }
+            }
+            log.debug("srcdeps[{}]: Uninstalling [{}]", scmRepoId, gavDir);
+            SrcdepsCoreUtils.deleteDirectory(gavDir);
+        }
     }
 
 }

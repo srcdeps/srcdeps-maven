@@ -57,6 +57,7 @@ public class TestUtils {
         srcdepsBuildMetadataPath = basedir.resolve("target/srcdeps/build-metadata");
         mvnLocalRepo = new MavenLocalRepository(mvnLocalRepoPath);
     }
+
     public static void assertExists(Path path) {
         Assert.assertTrue(String.format("File or directory does not exist [%s]", path.toString()), Files.exists(path));
     }
@@ -98,7 +99,7 @@ public class TestUtils {
                     final String path = m.group(1);
                     MavenDepsMavenIntegrationTest.log
                             .warn("Locking [" + path + "] as a workaround of not being able to remove it", e);
-                    new PathLocker<Object>().lockDirectory(Paths.get(path), new Object());
+                    new PathLocker<Object>().lockDirectory("lock", Paths.get(path), new Object());
                 } else {
                     throw e;
                 }

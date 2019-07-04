@@ -1,5 +1,5 @@
 #
-# Copyright 2015-2018 Maven Source Dependencies
+# Copyright 2015-2019 Maven Source Dependencies
 # Plugin contributors as indicated by the @author tags.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,7 +41,7 @@
 #
 # Required, no default
 # Since 1.0
-configModelVersion: 2.4
+configModelVersion: 3.0
 
 # `repositories` - a map of source repositories to checkout and build from
 #

@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-configModelVersion: 2.4
+configModelVersion: 3.0
 forwardAsMasterConfig: true
 repositories:
   org.srcdeps.mvn.quickstarts.srcdeps-mvn-git-master-config.hello:
