@@ -95,7 +95,7 @@
          around https://github.com/apache/maven/blob/master/pom.xml#L61 -->
     <version.org.eclipse.sisu>0.3.2</version.org.eclipse.sisu>
     <version.org.slf4j>1.7.5</version.org.slf4j>
-    <version.xerces>2.11.0</version.xerces>
+    <version.xerces>2.12.0</version.xerces>
 
     <!--
       Maven plugin versions
