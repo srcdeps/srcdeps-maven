@@ -30,7 +30,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <version.org.l2x6.maven.srcdeps.itest>0.0.1-SRC-tag-0.0.1</version.org.l2x6.maven.srcdeps.itest>
-    <version.junit>4.12</version.junit>
+    <version.junit>4.13.1</version.junit>
   </properties>
 
   <modules>
